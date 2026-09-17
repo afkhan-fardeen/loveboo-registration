@@ -316,16 +316,6 @@
     background: rgba(0, 109, 104, 0.08);
   }
 
-  .lb-sync-status {
-    margin: 0.5rem 0 0;
-    font-size: 0.68rem;
-    color: #A5321F;
-    opacity: 0.85;
-  }
-  .lb-sync-status[hidden] {
-    display: none;
-  }
-
   /* Instant Success Screen */
   .lb-success {
     text-align: center;
@@ -404,27 +394,33 @@
     border-radius: 50%;
     border: 0.35rem solid #FCF9F1;
     box-shadow: 0 0.5rem 1.5rem rgba(0, 81, 81, 0.25), 0 0 0 0.25rem #006D68;
-    background: conic-gradient(
-      #F8B5C4 0deg 60deg,
-      #FBD872 60deg 120deg,
-      #D7C6E6 120deg 180deg,
-      #C3DC93 180deg 240deg,
-      #9FD3CE 240deg 300deg,
-      #CFC9B8 300deg 360deg
-    );
+    background: #E3EABA;
     will-change: transform;
   }
   .lb-wheel-label {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 44%;
+    width: 40%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    font-size: 0.72rem;
+    font-size: 0.66rem;
     font-weight: 700;
     color: #005151;
-    line-height: 1.15;
+    line-height: 1.1;
     transform-origin: 0 0;
+  }
+  .lb-wheel-label img {
+    width: 2rem;
+    height: 2rem;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #FCF9F1;
+    box-shadow: 0 0.1rem 0.3rem rgba(0, 0, 0, 0.15);
+    margin-bottom: 0.25rem;
+    background: #fff;
   }
   .lb-wheel-hub {
     position: absolute;
@@ -665,7 +661,6 @@
 
   <footer class="lb-footer">
     <p class="lb-copyright">&copy; <span id="lbYear"></span> Love Boo. All rights reserved.</p>
-    <p id="lbSyncStatus" class="lb-sync-status" hidden></p>
   </footer>
 </div>
 
@@ -749,26 +744,10 @@
       createdAt: new Date().toISOString()
     });
     writeQueue(queueKey, queue);
-    updateSyncStatusUI();
   }
 
   function removeFromQueue(queueKey, id) {
     writeQueue(queueKey, readQueue(queueKey).filter(item => item.id !== id));
-    updateSyncStatusUI();
-  }
-
-  function updateSyncStatusUI() {
-    const el = document.getElementById("lbSyncStatus");
-    if (!el) return;
-    const count = readQueue(KLAVIYO_QUEUE_KEY).length + readQueue(SUPABASE_QUEUE_KEY).length;
-    if (count > 0) {
-      el.textContent = count === 1
-        ? "1 registration syncing in the background..."
-        : count + " registrations syncing in the background...";
-      el.hidden = false;
-    } else {
-      el.hidden = true;
-    }
   }
 
   // Single network attempt with a hard timeout so a dead connection can't
@@ -849,7 +828,6 @@
 
   document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("lbYear").textContent = new Date().getFullYear();
-    updateSyncStatusUI();
     flushQueue();
     setInterval(flushQueue, 20000);
     window.addEventListener("online", flushQueue);
@@ -866,10 +844,50 @@
     const spinBtn = document.getElementById("lbSpinBtn");
 
     // ---- Spin-to-win wheel ----------------------------------------------
-    // 5 gift placeholders + 1 "Try Again" — swap the placeholder names for
-    // real prizes whenever the product list is finalized.
-    const WHEEL_SEGMENTS = ["Gift 1", "Gift 2", "Gift 3", "Gift 4", "Gift 5", "Try Again"];
-    const SEGMENT_ANGLE = 360 / WHEEL_SEGMENTS.length;
+    // Prizes come from the admin-managed `prizes` table (name + image),
+    // capped at 5, plus a "Try Again" segment. Falls back to a single
+    // placeholder if no prizes have been configured yet, so the wheel
+    // never breaks even on a fresh setup.
+    const TRY_AGAIN = { name: "Try Again", image_url: null };
+    const SEGMENT_COLORS = ["#F8B5C4", "#FBD872", "#D7C6E6", "#C3DC93", "#9FD3CE"];
+    const TRY_AGAIN_COLOR = "#CFC9B8";
+
+    let wheelSegments = [TRY_AGAIN];
+    let segmentAngle = 360;
+    let lastKnownPrizes = [];
+
+    // Re-fetched on every spin cycle (not cached once at page load) since
+    // this kiosk can stay open for hours while prizes are added/changed
+    // live from the admin dashboard mid-event.
+    async function fetchWheelPrizes() {
+      if (!sbClient) return lastKnownPrizes;
+      try {
+        const { data, error } = await sbClient
+          .from("prizes")
+          .select("name, image_url")
+          .eq("active", true)
+          .order("sort_order", { ascending: true })
+          .limit(5);
+        if (error) throw error;
+        lastKnownPrizes = data || [];
+        return lastKnownPrizes;
+      } catch (err) {
+        console.warn("Could not load wheel prizes, using last known list:", err);
+        return lastKnownPrizes;
+      }
+    }
+
+    function setWheelSegments(prizes) {
+      const gifts = prizes.length ? prizes : [{ name: "Mystery Gift", image_url: null }];
+      wheelSegments = gifts.concat([TRY_AGAIN]);
+      segmentAngle = 360 / wheelSegments.length;
+
+      const stops = wheelSegments.map(function(seg, i) {
+        const color = seg === TRY_AGAIN ? TRY_AGAIN_COLOR : SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+        return color + " " + (i * segmentAngle) + "deg " + ((i + 1) * segmentAngle) + "deg";
+      });
+      wheelEl.style.background = "conic-gradient(" + stops.join(", ") + ")";
+    }
 
     // Radius is derived from the wheel's actual rendered size (not a fixed
     // rem value) so labels sit at the same proportional spot on any screen
@@ -877,11 +895,20 @@
     function layoutWheelLabels() {
       wheelEl.querySelectorAll(".lb-wheel-label").forEach(function(el) { el.remove(); });
       const radiusPx = wheelEl.getBoundingClientRect().width * 0.34;
-      WHEEL_SEGMENTS.forEach(function(label, i) {
-        const midAngle = i * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
+      wheelSegments.forEach(function(seg, i) {
+        const midAngle = i * segmentAngle + segmentAngle / 2;
         const el = document.createElement("div");
         el.className = "lb-wheel-label";
-        el.textContent = label;
+        if (seg.image_url) {
+          const img = document.createElement("img");
+          img.src = seg.image_url;
+          img.alt = "";
+          img.onerror = function() { img.remove(); };
+          el.appendChild(img);
+        }
+        const text = document.createElement("span");
+        text.textContent = seg.name;
+        el.appendChild(text);
         el.style.transform = "rotate(" + midAngle + "deg) translate(0, -" + radiusPx + "px)";
         wheelEl.appendChild(el);
       });
@@ -932,10 +959,16 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function showWheel() {
+    async function showWheel() {
       form.style.display = "none";
       wheelView.style.display = "block";
+      wheelStatus.textContent = "Loading prizes...";
+      spinBtn.disabled = true;
+      const prizes = await fetchWheelPrizes();
+      setWheelSegments(prizes);
       layoutWheelLabels();
+      wheelStatus.textContent = "";
+      spinBtn.disabled = false;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -983,16 +1016,16 @@
 
     function onLanded(idx) {
       spinning = false;
-      const label = WHEEL_SEGMENTS[idx];
+      const seg = wheelSegments[idx];
 
-      if (label === "Try Again" && spinCount < 2) {
+      if (seg === TRY_AGAIN && spinCount < 2) {
         wheelStatus.textContent = "So close! One more spin...";
         spinBtn.disabled = false;
         spinBtn.textContent = "Spin Again";
         return;
       }
 
-      const prize = label === "Try Again" ? null : label;
+      const prize = seg === TRY_AGAIN ? null : seg.name;
       wheelStatus.textContent = prize ? "Landed on " + prize + "!" : "No prize this time.";
       spinBtn.disabled = true;
       finalizeRegistration(prize);
@@ -1005,11 +1038,11 @@
       spinBtn.disabled = true;
       wheelStatus.textContent = "Spinning...";
 
-      const targetIndex = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
-      const midAngle = targetIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
+      const targetIndex = Math.floor(Math.random() * wheelSegments.length);
+      const midAngle = targetIndex * segmentAngle + segmentAngle / 2;
       // Small random jitter so it doesn't land dead-center every time,
       // kept well within the segment so it never reads as a neighbor.
-      const jitter = (Math.random() - 0.5) * (SEGMENT_ANGLE * 0.6);
+      const jitter = (Math.random() - 0.5) * (segmentAngle * 0.6);
       const targetMod = ((360 - (midAngle + jitter)) % 360 + 360) % 360;
       const fullSpins = 5 + Math.floor(Math.random() * 3);
       const currentMod = ((currentRotation % 360) + 360) % 360;

@@ -198,6 +198,90 @@
     color: #005151;
   }
 
+  /* ---- Tabs ---- */
+  .lb-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
+  .lb-tab {
+    background: transparent;
+    border: 1.5px solid #C3DC93;
+    color: #005151;
+    padding: 0.5rem 1rem;
+    border-radius: 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .lb-tab.active { background: #006D68; border-color: #006D68; color: #FCF9F1; }
+  .lb-panel { display: none; }
+  .lb-panel.active { display: block; }
+
+  /* ---- Prizes ---- */
+  .lb-prize-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    background: #fff;
+    border: 1.5px solid #C3DC93;
+    border-radius: 1rem;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .lb-prize-form .lb-field { margin-bottom: 0; flex: 1; min-width: 10rem; }
+  .lb-prize-form input[type="text"],
+  .lb-prize-form input[type="file"] {
+    width: 100%;
+    font-size: max(16px, 0.9rem);
+    color: #005151;
+    background: #FCF9F1;
+    border: 1.5px solid #C3DC93;
+    border-radius: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    box-sizing: border-box;
+  }
+  .lb-prize-form .lb-btn-sm { flex-shrink: 0; padding: 0.68rem 1.1rem; }
+
+  .lb-prize-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1rem;
+  }
+  .lb-prize-card {
+    background: #fff;
+    border: 1.5px solid #C3DC93;
+    border-radius: 1rem;
+    padding: 0.9rem;
+    text-align: center;
+  }
+  .lb-prize-card .lb-prize-thumb {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 0.75rem;
+    background: #FCF9F1 center/cover no-repeat;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #005151;
+    opacity: 0.5;
+    font-size: 0.7rem;
+    overflow: hidden;
+  }
+  .lb-prize-card .lb-prize-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .lb-prize-card .lb-prize-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #005151;
+    margin: 0 0 0.7rem;
+    word-break: break-word;
+  }
+  .lb-prize-card .lb-btn-sm {
+    width: 100%;
+    background: transparent;
+    color: #A5321F;
+    border: 1.5px solid #A5321F;
+  }
+  .lb-prize-card .lb-btn-sm:hover { background: rgba(165, 50, 31, 0.08); }
+
   @media (max-width: 40rem) {
     thead { display: none; }
     table, tbody, tr, td { display: block; width: 100%; }
@@ -256,27 +340,53 @@
     </div>
   </div>
 
-  <div class="lb-toolbar">
-    <input type="text" id="lbSearch" class="lb-search" placeholder="Search by name or email...">
-    <span class="lb-count" id="lbCount"></span>
+  <div class="lb-tabs">
+    <button type="button" class="lb-tab active" id="lbTabRegistrations">Registrations</button>
+    <button type="button" class="lb-tab" id="lbTabPrizes">Wheel Prizes</button>
   </div>
 
-  <div class="lb-table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>Parent?</th>
-          <th>Source</th>
-          <th>Registered</th>
-        </tr>
-      </thead>
-      <tbody id="lbTableBody"></tbody>
-    </table>
-    <div id="lbEmptyState" class="lb-empty-state" hidden>No registrations yet.</div>
-    <div id="lbLoadingState" class="lb-loading-state">Loading...</div>
+  <div class="lb-panel active" id="lbPanelRegistrations">
+    <div class="lb-toolbar">
+      <input type="text" id="lbSearch" class="lb-search" placeholder="Search by name or email...">
+      <span class="lb-count" id="lbCount"></span>
+    </div>
+
+    <div class="lb-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Parent?</th>
+            <th>Source</th>
+            <th>Prize</th>
+            <th>Registered</th>
+          </tr>
+        </thead>
+        <tbody id="lbTableBody"></tbody>
+      </table>
+      <div id="lbEmptyState" class="lb-empty-state" hidden>No registrations yet.</div>
+      <div id="lbLoadingState" class="lb-loading-state">Loading...</div>
+    </div>
+  </div>
+
+  <div class="lb-panel" id="lbPanelPrizes">
+    <form id="lbPrizeForm" class="lb-prize-form" novalidate>
+      <div class="lb-field">
+        <label for="lbPrizeName">Prize name</label>
+        <input type="text" id="lbPrizeName" placeholder="e.g. Baby Carrier" required>
+      </div>
+      <div class="lb-field">
+        <label for="lbPrizeImage">Prize image</label>
+        <input type="file" id="lbPrizeImage" accept="image/*" required>
+      </div>
+      <button type="submit" id="lbPrizeAddBtn" class="lb-btn-sm">Add Prize</button>
+    </form>
+    <p id="lbPrizeError" class="lb-login-error" role="alert" hidden></p>
+    <div class="lb-prize-grid" id="lbPrizeGrid"></div>
+    <div id="lbPrizeEmptyState" class="lb-empty-state" hidden>No prizes added yet — the wheel will use a placeholder until you add some.</div>
+    <div id="lbPrizeLoadingState" class="lb-loading-state">Loading...</div>
   </div>
 </div>
 
@@ -329,6 +439,7 @@
         '<td data-label="Phone">' + escapeHtml(r.phone || "—") + "</td>" +
         '<td data-label="Parent?"><span class="lb-badge">' + escapeHtml(r.is_parent || "—") + "</span></td>" +
         '<td data-label="Source">' + escapeHtml(r.source || "—") + "</td>" +
+        '<td data-label="Prize">' + escapeHtml(r.prize || "—") + "</td>" +
         '<td data-label="Registered">' + escapeHtml(formatDate(r.created_at)) + "</td>" +
         "</tr>"
       );
@@ -374,13 +485,13 @@
       return haystack.includes(q);
     });
 
-    const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
+    const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
     const csvRows = [headers.join(",")];
 
     rows.forEach(function(r) {
       const cells = [
         r.first_name, r.last_name, r.email, r.phone, r.is_parent,
-        r.source, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at
+        r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at
       ].map(function(v) {
         const s = v == null ? "" : String(v);
         return '"' + s.replace(/"/g, '""') + '"';
@@ -440,6 +551,157 @@
   document.getElementById("lbRefreshBtn").addEventListener("click", loadRegistrations);
   document.getElementById("lbExportBtn").addEventListener("click", downloadCsv);
   searchInput.addEventListener("input", applyFilter);
+
+  // ---- Tabs -------------------------------------------------------------
+  const tabRegistrations = document.getElementById("lbTabRegistrations");
+  const tabPrizes = document.getElementById("lbTabPrizes");
+  const panelRegistrations = document.getElementById("lbPanelRegistrations");
+  const panelPrizes = document.getElementById("lbPanelPrizes");
+  let prizesLoaded = false;
+
+  tabRegistrations.addEventListener("click", function() {
+    tabRegistrations.classList.add("active");
+    tabPrizes.classList.remove("active");
+    panelRegistrations.classList.add("active");
+    panelPrizes.classList.remove("active");
+  });
+
+  tabPrizes.addEventListener("click", function() {
+    tabPrizes.classList.add("active");
+    tabRegistrations.classList.remove("active");
+    panelPrizes.classList.add("active");
+    panelRegistrations.classList.remove("active");
+    if (!prizesLoaded) {
+      prizesLoaded = true;
+      loadPrizes();
+    }
+  });
+
+  // ---- Wheel prizes -------------------------------------------------------
+  const prizeForm = document.getElementById("lbPrizeForm");
+  const prizeNameInput = document.getElementById("lbPrizeName");
+  const prizeImageInput = document.getElementById("lbPrizeImage");
+  const prizeAddBtn = document.getElementById("lbPrizeAddBtn");
+  const prizeError = document.getElementById("lbPrizeError");
+  const prizeGrid = document.getElementById("lbPrizeGrid");
+  const prizeEmptyState = document.getElementById("lbPrizeEmptyState");
+  const prizeLoadingState = document.getElementById("lbPrizeLoadingState");
+
+  function renderPrizes(prizes) {
+    if (!prizes.length) {
+      prizeGrid.innerHTML = "";
+      prizeEmptyState.hidden = false;
+      return;
+    }
+    prizeEmptyState.hidden = true;
+    prizeGrid.innerHTML = prizes.map(function(p) {
+      const thumb = p.image_url
+        ? '<div class="lb-prize-thumb"><img src="' + escapeHtml(p.image_url) + '" alt=""></div>'
+        : '<div class="lb-prize-thumb">No image</div>';
+      return (
+        '<div class="lb-prize-card" data-id="' + p.id + '">' +
+        thumb +
+        '<p class="lb-prize-name">' + escapeHtml(p.name) + "</p>" +
+        '<button type="button" class="lb-btn-sm lb-prize-remove-btn">Remove</button>' +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  async function loadPrizes() {
+    prizeLoadingState.hidden = false;
+    prizeEmptyState.hidden = true;
+    const { data, error } = await sbClient
+      .from("prizes")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    prizeLoadingState.hidden = true;
+
+    if (error) {
+      console.error("Failed to load prizes:", error.message);
+      prizeGrid.innerHTML = "";
+      prizeEmptyState.textContent = "Couldn't load prizes: " + error.message;
+      prizeEmptyState.hidden = false;
+      return;
+    }
+
+    renderPrizes(data || []);
+  }
+
+  prizeForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    prizeError.hidden = true;
+
+    const name = prizeNameInput.value.trim();
+    const file = prizeImageInput.files[0];
+
+    if (!name || !file) return;
+
+    prizeAddBtn.disabled = true;
+    prizeAddBtn.textContent = "Adding...";
+
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+
+      const { error: uploadError } = await sbClient.storage
+        .from("prize-images")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = sbClient.storage.from("prize-images").getPublicUrl(path);
+
+      const { error: insertError } = await sbClient.from("prizes").insert({
+        name: name,
+        image_url: publicUrlData.publicUrl,
+        image_path: path,
+        sort_order: Date.now()
+      });
+
+      if (insertError) throw insertError;
+
+      prizeForm.reset();
+      loadPrizes();
+    } catch (err) {
+      prizeError.textContent = "Couldn't add prize: " + (err.message || err);
+      prizeError.hidden = false;
+    } finally {
+      prizeAddBtn.disabled = false;
+      prizeAddBtn.textContent = "Add Prize";
+    }
+  });
+
+  prizeGrid.addEventListener("click", async function(e) {
+    const btn = e.target.closest(".lb-prize-remove-btn");
+    if (!btn) return;
+    const card = btn.closest(".lb-prize-card");
+    const id = card.getAttribute("data-id");
+    if (!confirm("Remove this prize from the wheel?")) return;
+
+    btn.disabled = true;
+    btn.textContent = "Removing...";
+
+    const { data: prizeRow } = await sbClient.from("prizes").select("image_path").eq("id", id).single();
+
+    const { error } = await sbClient.from("prizes").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to remove prize:", error.message);
+      btn.disabled = false;
+      btn.textContent = "Remove";
+      return;
+    }
+
+    if (prizeRow && prizeRow.image_path) {
+      sbClient.storage.from("prize-images").remove([prizeRow.image_path]).catch(function(err) {
+        console.warn("Could not delete prize image from storage:", err);
+      });
+    }
+
+    loadPrizes();
+  });
 
   // Live updates: new registrations appear without needing a manual refresh.
   sbClient
