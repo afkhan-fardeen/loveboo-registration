@@ -3,13 +3,15 @@
 // existing retry/backup-queue logic in the pages keeps working exactly as
 // before. This only makes the page itself load instantly (and even offline)
 // on a kiosk with flaky venue wifi.
-const CACHE_VERSION = "lb-shell-v1";
+const CACHE_VERSION = "lb-shell-v2";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/admin.html",
   "/supabase-config.js",
-  "/manifest.json"
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
