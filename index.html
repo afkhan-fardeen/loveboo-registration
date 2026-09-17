@@ -6,6 +6,8 @@
 <title>Love Boo | Baby Expo 2026 Registration</title>
 <meta name="description" content="Register for Love Boo at Dubai Baby Expo 2026 and collect your gift bag at our booth.">
 <link rel="icon" href="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=32">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -564,8 +566,13 @@
   const KLAVIYO_COMPANY_ID = "SQtNNh";
   const KLAVIYO_LIST_ID = "YhCSvv";
   const KLAVIYO_ENDPOINT = `https://a.klaviyo.com/client/subscriptions/?company_id=${KLAVIYO_COMPANY_ID}`;
-  const QUEUE_KEY = "lb_expo_pending_queue";
+  const KLAVIYO_QUEUE_KEY = "lb_expo_pending_queue";
+  const SUPABASE_QUEUE_KEY = "lb_expo_supabase_pending_queue";
   const MAX_SEND_ATTEMPTS = 3;
+
+  const sbClient = (typeof supabase !== "undefined" && typeof SUPABASE_URL !== "undefined")
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
   function getUrlParams() {
     try {
@@ -604,48 +611,49 @@
     return null;
   }
 
-  // ---- Local backup queue -------------------------------------------
+  // ---- Local backup queues -------------------------------------------
   // Every registration is written to localStorage before we even try to
-  // send it. If the Klaviyo request fails (blocked by an ad-blocker /
-  // privacy extension, flaky venue wifi, a bad response, etc.) the entry
-  // stays queued and is retried automatically in the background, so a
-  // busy booth kiosk never silently loses a guest's details.
-  function readQueue() {
+  // send it, separately for Klaviyo and Supabase. If either request fails
+  // (blocked by an ad-blocker / privacy extension, flaky venue wifi, a bad
+  // response, etc.) that entry stays queued and is retried automatically in
+  // the background, so a busy booth kiosk never silently loses a guest's
+  // details even if one of the two destinations is temporarily unreachable.
+  function readQueue(queueKey) {
     try {
-      return JSON.parse(localStorage.getItem(QUEUE_KEY)) || [];
+      return JSON.parse(localStorage.getItem(queueKey)) || [];
     } catch (e) {
       return [];
     }
   }
 
-  function writeQueue(queue) {
+  function writeQueue(queueKey, queue) {
     try {
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      localStorage.setItem(queueKey, JSON.stringify(queue));
     } catch (e) {
       console.warn("Could not persist local registration queue:", e);
     }
   }
 
-  function enqueue(payload) {
-    const queue = readQueue();
+  function enqueue(queueKey, payload) {
+    const queue = readQueue(queueKey);
     queue.push({
       id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
       payload: payload,
       createdAt: new Date().toISOString()
     });
-    writeQueue(queue);
+    writeQueue(queueKey, queue);
     updateSyncStatusUI();
   }
 
-  function removeFromQueue(id) {
-    writeQueue(readQueue().filter(item => item.id !== id));
+  function removeFromQueue(queueKey, id) {
+    writeQueue(queueKey, readQueue(queueKey).filter(item => item.id !== id));
     updateSyncStatusUI();
   }
 
   function updateSyncStatusUI() {
     const el = document.getElementById("lbSyncStatus");
     if (!el) return;
-    const count = readQueue().length;
+    const count = readQueue(KLAVIYO_QUEUE_KEY).length + readQueue(SUPABASE_QUEUE_KEY).length;
     if (count > 0) {
       el.textContent = count === 1
         ? "1 registration syncing in the background..."
@@ -658,7 +666,7 @@
 
   // Single network attempt with a hard timeout so a dead connection can't
   // hang the kiosk indefinitely. Resolves true only on a real 2xx from Klaviyo.
-  async function sendOnce(payload) {
+  async function sendKlaviyoOnce(payload) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
@@ -681,9 +689,25 @@
     }
   }
 
-  async function sendWithRetry(payload, attempts) {
+  // Single insert attempt into the Supabase `registrations` table.
+  async function sendSupabaseOnce(row) {
+    if (!sbClient) return false;
+    try {
+      const { error } = await sbClient.from("registrations").insert(row);
+      if (error) {
+        console.warn("Supabase insert failed:", error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn("Supabase insert attempt failed:", err);
+      return false;
+    }
+  }
+
+  async function sendWithRetry(sendFn, payload, attempts) {
     for (let i = 0; i < attempts; i++) {
-      if (await sendOnce(payload)) return true;
+      if (await sendFn(payload)) return true;
       if (i < attempts - 1) {
         await new Promise(r => setTimeout(r, 400 * (i + 1)));
       }
@@ -697,10 +721,11 @@
     if (!navigator.onLine) return;
     flushInFlight = true;
     try {
-      const queue = readQueue();
-      for (const item of queue) {
-        const ok = await sendOnce(item.payload);
-        if (ok) removeFromQueue(item.id);
+      for (const item of readQueue(KLAVIYO_QUEUE_KEY)) {
+        if (await sendKlaviyoOnce(item.payload)) removeFromQueue(KLAVIYO_QUEUE_KEY, item.id);
+      }
+      for (const item of readQueue(SUPABASE_QUEUE_KEY)) {
+        if (await sendSupabaseOnce(item.payload)) removeFromQueue(SUPABASE_QUEUE_KEY, item.id);
       }
     } finally {
       flushInFlight = false;
@@ -809,7 +834,7 @@
           profileAttributes.phone_number = fullPhone;
         }
 
-        const payload = {
+        const klaviyoPayload = {
           data: {
             type: "subscription",
             attributes: {
@@ -832,22 +857,41 @@
           }
         };
 
+        const supabaseRow = {
+          first_name: firstName,
+          last_name: lastName || null,
+          email: email,
+          phone: fullPhone || null,
+          is_parent: isParent,
+          source: utmParams.utm_source || "baby_expo_2026",
+          utm_source: utmParams.utm_source || null,
+          utm_medium: utmParams.utm_medium || null,
+          utm_campaign: utmParams.utm_campaign || null,
+          utm_term: utmParams.utm_term || null,
+          utm_content: utmParams.utm_content || null
+        };
+
         if (!navigator.onLine) {
-          // No point hammering the network — queue immediately.
-          enqueue(payload);
+          // No point hammering the network — queue both immediately.
+          enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
+          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Sign Up";
           showSuccess();
           return;
         }
 
-        const confirmed = await sendWithRetry(payload, MAX_SEND_ATTEMPTS);
+        // Send to both destinations independently — a failure in one
+        // (e.g. Klaviyo blocked by an ad-blocker) must not stop the other
+        // (Supabase, your source of truth for the admin list) from saving,
+        // and vice versa. Each has its own retry + local backup queue.
+        const [klaviyoConfirmed, supabaseConfirmed] = await Promise.all([
+          sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS),
+          sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS)
+        ]);
 
-        if (!confirmed) {
-          // Couldn't get a confirmed response from Klaviyo after retries.
-          // Never lose the guest's details: keep them queued locally and
-          // keep retrying in the background, and still let the guest
-          // through so the line at the booth keeps moving.
-          enqueue(payload);
-        }
+        if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
+        if (!supabaseConfirmed) enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
 
         submitBtn.disabled = false;
         submitBtn.textContent = "Sign Up";

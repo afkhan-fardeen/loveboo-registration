@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Love Boo | Registrations Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=32">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { font-size: clamp(15px, 0.4vw + 13px, 18px); }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #FCF9F1;
+    width: 100%;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #005151;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* ---- Login screen ---- */
+  .lb-login-wrap {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .lb-login-card {
+    width: 100%;
+    max-width: 22rem;
+    background: #fff;
+    border: 1.5px solid #C3DC93;
+    border-radius: 1.25rem;
+    padding: 2rem 1.75rem;
+  }
+  .lb-login-card img { display: block; max-width: 7.5rem; margin: 0 auto 1.25rem; }
+  .lb-login-card h1 {
+    font-size: 1.05rem;
+    text-align: center;
+    margin: 0 0 1.5rem;
+    color: #005151;
+  }
+  .lb-field { margin-bottom: 0.9rem; }
+  .lb-field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .lb-field input {
+    width: 100%;
+    font-size: max(16px, 0.95rem);
+    color: #005151;
+    background: #FCF9F1;
+    border: 1.5px solid #C3DC93;
+    border-radius: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    box-sizing: border-box;
+  }
+  .lb-field input:focus {
+    outline: none;
+    border-color: #006D68;
+    box-shadow: 0 0 0 3px rgba(0, 109, 104, 0.12);
+  }
+  .lb-btn {
+    width: 100%;
+    background: #006D68;
+    color: #FCF9F1;
+    border: none;
+    padding: 0.85rem;
+    border-radius: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.4rem;
+  }
+  .lb-btn:hover { background: #005151; }
+  .lb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .lb-login-error {
+    background: #FDEDEA;
+    border: 1.5px solid #E8998D;
+    color: #A5321F;
+    border-radius: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+  }
+  .lb-login-error[hidden] { display: none; }
+
+  /* ---- Dashboard ---- */
+  .lb-dash { display: none; padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 3rem; max-width: 90rem; margin: 0 auto; }
+  .lb-dash-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .lb-dash-title { display: flex; align-items: center; gap: 0.6rem; }
+  .lb-dash-title img { width: 2rem; height: auto; }
+  .lb-dash-title h1 { font-size: 1.1rem; margin: 0; }
+  .lb-dash-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .lb-btn-sm {
+    background: #006D68;
+    color: #FCF9F1;
+    border: none;
+    padding: 0.55rem 0.9rem;
+    border-radius: 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .lb-btn-sm:hover { background: #005151; }
+  .lb-btn-sm.lb-btn-outline {
+    background: transparent;
+    color: #006D68;
+    border: 1.5px solid #006D68;
+  }
+  .lb-btn-sm.lb-btn-outline:hover { background: rgba(0, 109, 104, 0.08); }
+  .lb-btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .lb-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .lb-search {
+    flex: 1;
+    min-width: 12rem;
+    font-size: max(16px, 0.9rem);
+    padding: 0.6rem 0.85rem;
+    border: 1.5px solid #C3DC93;
+    border-radius: 0.65rem;
+    background: #fff;
+    color: #005151;
+  }
+  .lb-search:focus { outline: none; border-color: #006D68; }
+  .lb-count { font-size: 0.8rem; color: #005151; opacity: 0.75; white-space: nowrap; }
+
+  .lb-table-wrap {
+    background: #fff;
+    border: 1.5px solid #C3DC93;
+    border-radius: 1rem;
+    overflow: auto;
+    max-height: 65vh;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: #E3EABA;
+    color: #005151;
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 0.65rem 0.9rem;
+    border-top: 1px solid #EFEADB;
+    vertical-align: top;
+  }
+  tbody tr:hover { background: #FCF9F1; }
+  .lb-empty-state, .lb-loading-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #005151;
+    opacity: 0.7;
+    font-size: 0.9rem;
+  }
+  .lb-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: #E3EABA;
+    color: #005151;
+  }
+
+  @media (max-width: 40rem) {
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tbody tr {
+      border-top: 1px solid #EFEADB;
+      padding: 0.75rem 0.9rem;
+    }
+    tbody td {
+      border-top: none;
+      padding: 0.2rem 0;
+    }
+    tbody td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      opacity: 0.6;
+      margin-bottom: 0.1rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="lb-login-wrap" id="lbLoginWrap">
+  <div class="lb-login-card">
+    <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250" alt="Love Boo">
+    <h1>Registrations Admin</h1>
+    <p id="lbLoginError" class="lb-login-error" role="alert" hidden></p>
+    <form id="lbLoginForm" novalidate>
+      <div class="lb-field">
+        <label for="lbAdminEmail">Email</label>
+        <input type="email" id="lbAdminEmail" required autocomplete="username">
+      </div>
+      <div class="lb-field">
+        <label for="lbAdminPassword">Password</label>
+        <input type="password" id="lbAdminPassword" required autocomplete="current-password">
+      </div>
+      <button type="submit" id="lbLoginBtn" class="lb-btn">Log In</button>
+    </form>
+  </div>
+</div>
+
+<div class="lb-dash" id="lbDash">
+  <div class="lb-dash-header">
+    <div class="lb-dash-title">
+      <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=64" alt="Love Boo">
+      <h1>Baby Expo 2026 Registrations</h1>
+    </div>
+    <div class="lb-dash-actions">
+      <button type="button" id="lbRefreshBtn" class="lb-btn-sm lb-btn-outline">Refresh</button>
+      <button type="button" id="lbExportBtn" class="lb-btn-sm lb-btn-outline">Export CSV</button>
+      <button type="button" id="lbSignOutBtn" class="lb-btn-sm">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="lb-toolbar">
+    <input type="text" id="lbSearch" class="lb-search" placeholder="Search by name or email...">
+    <span class="lb-count" id="lbCount"></span>
+  </div>
+
+  <div class="lb-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Parent?</th>
+          <th>Source</th>
+          <th>Registered</th>
+        </tr>
+      </thead>
+      <tbody id="lbTableBody"></tbody>
+    </table>
+    <div id="lbEmptyState" class="lb-empty-state" hidden>No registrations yet.</div>
+    <div id="lbLoadingState" class="lb-loading-state">Loading...</div>
+  </div>
+</div>
+
+<script>
+  const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const loginWrap = document.getElementById("lbLoginWrap");
+  const dash = document.getElementById("lbDash");
+  const loginForm = document.getElementById("lbLoginForm");
+  const loginBtn = document.getElementById("lbLoginBtn");
+  const loginError = document.getElementById("lbLoginError");
+  const tableBody = document.getElementById("lbTableBody");
+  const emptyState = document.getElementById("lbEmptyState");
+  const loadingState = document.getElementById("lbLoadingState");
+  const searchInput = document.getElementById("lbSearch");
+  const countEl = document.getElementById("lbCount");
+
+  let allRows = [];
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
+  function formatDate(iso) {
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+    } catch (e) {
+      return iso || "";
+    }
+  }
+
+  function renderRows(rows) {
+    if (!rows.length) {
+      tableBody.innerHTML = "";
+      emptyState.hidden = false;
+      return;
+    }
+    emptyState.hidden = true;
+    tableBody.innerHTML = rows.map(function(r) {
+      const name = [r.first_name, r.last_name].filter(Boolean).join(" ");
+      return (
+        "<tr>" +
+        '<td data-label="Name">' + escapeHtml(name) + "</td>" +
+        '<td data-label="Email">' + escapeHtml(r.email) + "</td>" +
+        '<td data-label="Phone">' + escapeHtml(r.phone || "—") + "</td>" +
+        '<td data-label="Parent?"><span class="lb-badge">' + escapeHtml(r.is_parent || "—") + "</span></td>" +
+        '<td data-label="Source">' + escapeHtml(r.source || "—") + "</td>" +
+        '<td data-label="Registered">' + escapeHtml(formatDate(r.created_at)) + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+  }
+
+  function applyFilter() {
+    const q = searchInput.value.trim().toLowerCase();
+    const filtered = !q ? allRows : allRows.filter(function(r) {
+      const haystack = [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(q);
+    });
+    countEl.textContent = filtered.length + (filtered.length === 1 ? " registration" : " registrations");
+    renderRows(filtered);
+  }
+
+  async function loadRegistrations() {
+    loadingState.hidden = false;
+    emptyState.hidden = true;
+    const { data, error } = await sbClient
+      .from("registrations")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    loadingState.hidden = true;
+
+    if (error) {
+      console.error("Failed to load registrations:", error.message);
+      tableBody.innerHTML = "";
+      emptyState.textContent = "Couldn't load registrations: " + error.message;
+      emptyState.hidden = false;
+      return;
+    }
+
+    allRows = data || [];
+    applyFilter();
+  }
+
+  function downloadCsv() {
+    const q = searchInput.value.trim().toLowerCase();
+    const rows = !q ? allRows : allRows.filter(function(r) {
+      const haystack = [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(q);
+    });
+
+    const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
+    const csvRows = [headers.join(",")];
+
+    rows.forEach(function(r) {
+      const cells = [
+        r.first_name, r.last_name, r.email, r.phone, r.is_parent,
+        r.source, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at
+      ].map(function(v) {
+        const s = v == null ? "" : String(v);
+        return '"' + s.replace(/"/g, '""') + '"';
+      });
+      csvRows.push(cells.join(","));
+    });
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function showDash() {
+    loginWrap.style.display = "none";
+    dash.style.display = "block";
+    loadRegistrations();
+  }
+
+  function showLogin() {
+    dash.style.display = "none";
+    loginWrap.style.display = "flex";
+  }
+
+  loginForm.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    loginError.hidden = true;
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+
+    const email = document.getElementById("lbAdminEmail").value.trim();
+    const password = document.getElementById("lbAdminPassword").value;
+
+    const { error } = await sbClient.auth.signInWithPassword({ email, password });
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Log In";
+
+    if (error) {
+      loginError.textContent = error.message;
+      loginError.hidden = false;
+      return;
+    }
+    showDash();
+  });
+
+  document.getElementById("lbSignOutBtn").addEventListener("click", async function() {
+    await sbClient.auth.signOut();
+    showLogin();
+  });
+
+  document.getElementById("lbRefreshBtn").addEventListener("click", loadRegistrations);
+  document.getElementById("lbExportBtn").addEventListener("click", downloadCsv);
+  searchInput.addEventListener("input", applyFilter);
+
+  // Live updates: new registrations appear without needing a manual refresh.
+  sbClient
+    .channel("registrations-changes")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, function(payload) {
+      allRows = [payload.new].concat(allRows);
+      applyFilter();
+    })
+    .subscribe();
+
+  (async function init() {
+    const { data } = await sbClient.auth.getSession();
+    if (data && data.session) {
+      showDash();
+    } else {
+      showLogin();
+    }
+  })();
+</script>
+
+</body>
+</html>
