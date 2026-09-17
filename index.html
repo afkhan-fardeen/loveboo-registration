@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Love Boo | Baby Expo 2026 Registration</title>
+<meta name="description" content="Register for Love Boo at Dubai Baby Expo 2026 and collect your gift bag at our booth.">
+<link rel="icon" href="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=32">
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #FCF9F1;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Fluid base scale: grows smoothly from phone up through tablet, desktop
+     and large kiosk/TV displays without needing a wall of breakpoints. */
+  html {
+    font-size: clamp(16px, 0.85vw + 12px, 24px);
+  }
+
+  .lb-event-wrapper {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(24px, 4vh, 56px);
+    padding: clamp(24px, 4vh, 56px) clamp(20px, 4vw, 48px);
+    background-color: #FCF9F1;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* Meadow Background Layer */
+  .lb-meadow-decor {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  /* Peripheral Vector SVGs */
+  .lb-svg-bloom {
+    position: absolute;
+    opacity: 0.32;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 6px rgba(0, 81, 81, 0.03));
+  }
+  .lb-svg-tl { top: -0.9rem; left: -0.9rem; width: 5.625rem; height: 5.625rem; transform: rotate(-10deg); }
+  .lb-svg-tr { top: -0.6rem; right: -0.9rem; width: 6.25rem; height: 6.25rem; transform: rotate(15deg); }
+  .lb-svg-bl { bottom: 5%; left: -0.6rem; width: 5.9375rem; height: 5.9375rem; transform: rotate(20deg); }
+  .lb-svg-br { bottom: 4%; right: -0.6rem; width: 6.875rem; height: 6.875rem; transform: rotate(-6deg); }
+
+  /* Floating Form Area */
+  .lb-content-area {
+    position: relative;
+    z-index: 2;
+    max-width: 26.25rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Brand Header */
+  .lb-brand {
+    text-align: center;
+    margin-bottom: 1.4rem;
+  }
+  .lb-logo-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+  .lb-brand-img {
+    max-width: 8.125rem;
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+  }
+  .lb-subtitle {
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #005151;
+    margin: 0.4rem 0 0;
+    opacity: 0.85;
+  }
+
+  /* Form Elements */
+  .lb-row {
+    margin-bottom: 0.9rem;
+    width: 100%;
+  }
+  .lb-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+  }
+  .lb-field {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+  }
+  .lb-field label, .lb-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #005151;
+    margin-bottom: 0.4rem;
+    display: block;
+  }
+
+  /* Minimum 16px input font prevents iOS Safari auto-zoom on focus */
+  .lb-field input,
+  .lb-phone-input-wrap input,
+  .lb-country-code-select select {
+    font-size: max(16px, 0.95rem);
+    color: #005151;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1.5px solid #C3DC93;
+    border-radius: 0.875rem;
+    padding: 0.85rem 0.9rem;
+    min-height: 3rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .lb-field input:focus,
+  .lb-phone-input-wrap input:focus,
+  .lb-country-code-select select:focus {
+    outline: none;
+    background: #FFFFFF;
+    border-color: #006D68;
+    box-shadow: 0 0 0 3px rgba(0, 109, 104, 0.12);
+  }
+
+  /* Phone Group */
+  .lb-phone-group {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .lb-country-code-select {
+    position: relative;
+    width: 8.5rem;
+    flex-shrink: 0;
+  }
+  .lb-country-code-select select {
+    height: 100%;
+    cursor: pointer;
+    font-weight: 600;
+    padding-right: 1.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .lb-country-code-select::after {
+    content: "";
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #005151;
+    pointer-events: none;
+  }
+  .lb-phone-input-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Parent Toggle */
+  .lb-parent-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.625rem;
+  }
+  .lb-toggle-opt input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .lb-toggle-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 3rem;
+    padding: 0.6rem;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1.5px solid #C3DC93;
+    border-radius: 0.875rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #005151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+  }
+  .lb-toggle-opt input:checked + .lb-toggle-box {
+    background: #006D68;
+    color: #FCF9F1;
+    border-color: #006D68;
+    box-shadow: 0 4px 12px rgba(0, 109, 104, 0.18);
+  }
+  .lb-toggle-opt input:focus-visible + .lb-toggle-box {
+    outline: 2px solid #006D68;
+    outline-offset: 2px;
+  }
+
+  /* Terms Checkbox */
+  .lb-terms-row {
+    margin: 1rem 0 0.375rem;
+  }
+  .lb-checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: #005151;
+    line-height: 1.4;
+  }
+  .lb-checkbox-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.0625rem;
+    border: 1.5px solid #006D68;
+    border-radius: 4px;
+    accent-color: #006D68;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .lb-checkbox-label a {
+    color: #006D68;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .lb-consent-text {
+    font-size: 0.7rem;
+    color: #6C7D6E;
+    text-align: center;
+    line-height: 1.45;
+    margin: 0.75rem 0 0;
+  }
+
+  /* Submit CTA */
+  .lb-btn {
+    width: 100%;
+    background: #006D68;
+    color: #FCF9F1;
+    border: none;
+    padding: 0.95rem;
+    min-height: 3.25rem;
+    border-radius: 1rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    transition: background 0.2s ease, transform 0.1s ease;
+  }
+  .lb-btn:hover {
+    background: #005151;
+  }
+  .lb-btn:active {
+    transform: scale(0.99);
+  }
+  .lb-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  .lb-btn:focus-visible {
+    outline: 2px solid #005151;
+    outline-offset: 2px;
+  }
+  .lb-btn-secondary {
+    background: transparent;
+    color: #006D68;
+    border: 1.5px solid #006D68;
+    margin-top: 1.5rem;
+  }
+  .lb-btn-secondary:hover {
+    background: rgba(0, 109, 104, 0.08);
+  }
+
+  .lb-sync-status {
+    margin: 0.5rem 0 0;
+    font-size: 0.68rem;
+    color: #A5321F;
+    opacity: 0.85;
+  }
+  .lb-sync-status[hidden] {
+    display: none;
+  }
+
+  /* Instant Success Screen */
+  .lb-success {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    display: none;
+  }
+  .lb-success-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    background: #E3EABA;
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+  }
+  .lb-success-badge svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .lb-success h2 {
+    color: #005151;
+    margin: 0 0 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  .lb-success p {
+    color: #005151;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .lb-footer {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+  }
+  .lb-copyright {
+    margin: 0;
+    font-size: 0.72rem;
+    color: #005151;
+    opacity: 0.65;
+    letter-spacing: 0.03em;
+  }
+
+  /* Tablet and up: give the card a little more breathing room */
+  @media (min-width: 48rem) {
+    .lb-content-area { max-width: 29rem; }
+  }
+
+  /* Desktop / small kiosk */
+  @media (min-width: 64rem) {
+    .lb-content-area { max-width: 32rem; }
+  }
+
+  /* Large kiosk / TV display: bigger card, bigger tap targets so it reads
+     well from a short standing distance */
+  @media (min-width: 90rem) {
+    .lb-content-area { max-width: 38rem; }
+    .lb-btn { min-height: 3.75rem; }
+    .lb-field input,
+    .lb-phone-input-wrap input,
+    .lb-country-code-select select,
+    .lb-toggle-box { min-height: 3.5rem; }
+  }
+
+  /* Touch devices (phones, tablets, touch kiosks): guarantee comfortably
+     large tap targets regardless of screen size */
+  @media (pointer: coarse) {
+    .lb-field input,
+    .lb-phone-input-wrap input,
+    .lb-country-code-select select,
+    .lb-toggle-box,
+    .lb-btn {
+      min-height: 3.25rem;
+    }
+    .lb-checkbox-label input[type="checkbox"] {
+      width: 1.375rem;
+      height: 1.375rem;
+    }
+  }
+
+  /* Short / landscape viewports (tablet landscape, landscape kiosk):
+     tighten vertical rhythm so nothing gets clipped or forces scrolling */
+  @media (max-height: 30rem) {
+    .lb-event-wrapper { gap: 1rem; padding-top: 1rem; padding-bottom: 1rem; }
+    .lb-brand { margin-bottom: 0.75rem; }
+    .lb-row { margin-bottom: 0.6rem; }
+  }
+
+  @media (max-width: 30rem) {
+    .lb-split { grid-template-columns: 1fr; gap: 0.875rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lb-event-wrapper">
+  <!-- Floral Meadow Background -->
+  <div class="lb-meadow-decor" id="lbMeadowDecor" aria-hidden="true"></div>
+
+  <!-- Soft Vector SVGs -->
+  <div class="lb-meadow-decor" aria-hidden="true">
+    <svg class="lb-svg-bloom lb-svg-tl" viewBox="0 0 100 100" fill="none">
+      <path d="M20 90C35 65 50 45 65 20" stroke="#006D68" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="68" cy="22" r="14" fill="#F8B5C4"/>
+      <circle cx="68" cy="22" r="6" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-tr" viewBox="0 0 120 120" fill="none">
+      <path d="M95 110C80 75 65 50 40 30" stroke="#005151" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="40" cy="30" r="7" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-bl" viewBox="0 0 110 110" fill="none">
+      <path d="M30 95C40 65 55 45 75 30" stroke="#006D68" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="75" cy="30" r="6" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-br" viewBox="0 0 130 130" fill="none">
+      <path d="M100 120C80 85 60 55 50 15" stroke="#005151" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="50" cy="18" r="13" fill="#D7C6E6"/>
+    </svg>
+  </div>
+
+  <!-- Floating Content Area -->
+  <div class="lb-content-area">
+    <div class="lb-brand">
+      <div class="lb-logo-wrap">
+        <img
+          src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
+          alt="Love Boo"
+          class="lb-brand-img"
+          width="130"
+          loading="eager"
+        >
+      </div>
+      <p class="lb-subtitle">Baby Expo 2026</p>
+    </div>
+
+    <!-- Instant Success Screen -->
+    <div id="lbSuccessView" class="lb-success">
+      <div class="lb-success-badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 12.5L9.5 18L20 6" stroke="#006D68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2>Thank you!</h2>
+      <p>You're registered. Show this screen at our booth to collect your gift bag.</p>
+      <button type="button" id="lbRegisterAnotherBtn" class="lb-btn lb-btn-secondary">Register Another Guest</button>
+    </div>
+
+    <!-- Client Form -->
+    <form id="LoveBooKlaviyoSignup" novalidate>
+      <div class="lb-row lb-split">
+        <div class="lb-field">
+          <label for="LbFirst">First Name</label>
+          <input type="text" id="LbFirst" placeholder="First name" required autocomplete="given-name">
+        </div>
+        <div class="lb-field">
+          <label for="LbLast">Last Name</label>
+          <input type="text" id="LbLast" placeholder="Last name" autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-field">
+          <label for="LbEmail">Email Address</label>
+          <input type="email" id="LbEmail" placeholder="email@example.com" required autocomplete="email" inputmode="email">
+        </div>
+      </div>
+
+      <div class="lb-row">
+        <div class="lb-field">
+          <label for="LbPhoneInput">Phone Number</label>
+          <div class="lb-phone-group">
+            <div class="lb-country-code-select">
+              <select id="LbCountryCode" aria-label="Country Dialing Code">
+                <optgroup label="GCC & Regional">
+                  <option value="+971" selected>UAE +971</option>
+                  <option value="+973">Bahrain +973</option>
+                  <option value="+966">Saudi Arabia +966</option>
+                  <option value="+965">Kuwait +965</option>
+                  <option value="+968">Oman +968</option>
+                  <option value="+974">Qatar +974</option>
+                </optgroup>
+                <optgroup label="International">
+                  <option value="+44">UK +44</option>
+                  <option value="+1">USA +1</option>
+                  <option value="+91">India +91</option>
+                  <option value="+61">Australia +61</option>
+                  <option value="+33">France +33</option>
+                  <option value="+49">Germany +49</option>
+                  <option value="+92">Pakistan +92</option>
+                  <option value="+63">Philippines +63</option>
+                  <option value="+20">Egypt +20</option>
+                  <option value="+962">Jordan +962</option>
+                  <option value="+961">Lebanon +961</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="lb-phone-input-wrap">
+              <input type="tel" id="LbPhoneInput" placeholder="Mobile number" autocomplete="tel" inputmode="tel">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parent Toggle -->
+      <div class="lb-row">
+        <span class="lb-label">Are you a parent?</span>
+        <div class="lb-parent-toggle">
+          <label class="lb-toggle-opt">
+            <input type="radio" name="parent_status" value="Yes" checked>
+            <span class="lb-toggle-box">Yes</span>
+          </label>
+          <label class="lb-toggle-opt">
+            <input type="radio" name="parent_status" value="No">
+            <span class="lb-toggle-box">No</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Terms Checkbox -->
+      <div class="lb-terms-row">
+        <label class="lb-checkbox-label" for="LbTerms">
+          <input type="checkbox" id="LbTerms" required>
+          <span>I agree to the <a href="https://loveboo.com/policies/terms-of-service" target="_blank" rel="noopener">Terms & Conditions</a> and <a href="https://loveboo.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+        </label>
+      </div>
+
+      <p class="lb-consent-text">
+        By signing up, you agree to receive Love Boo event updates and exclusive offers via email and SMS. You can unsubscribe at any time.
+      </p>
+
+      <button type="submit" id="lbSubmitBtn" class="lb-btn">Sign Up</button>
+    </form>
+  </div>
+
+  <footer class="lb-footer">
+    <p class="lb-copyright">&copy; <span id="lbYear"></span> Love Boo. All rights reserved.</p>
+    <p id="lbSyncStatus" class="lb-sync-status" hidden></p>
+  </footer>
+</div>
+
+<script>
+  const KLAVIYO_COMPANY_ID = "SQtNNh";
+  const KLAVIYO_LIST_ID = "YhCSvv";
+  const KLAVIYO_ENDPOINT = `https://a.klaviyo.com/client/subscriptions/?company_id=${KLAVIYO_COMPANY_ID}`;
+  const QUEUE_KEY = "lb_expo_pending_queue";
+  const MAX_SEND_ATTEMPTS = 3;
+
+  function getUrlParams() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const utms = {};
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(key => {
+        const val = params.get(key);
+        if (val) utms[key] = val.trim();
+      });
+      return utms;
+    } catch(e) {
+      return {};
+    }
+  }
+
+  // Mobile Autofill Safe Sanitizer
+  function formatMobilePhone(rawInput, selectedDialCode) {
+    if (!rawInput) return null;
+    let clean = rawInput.trim();
+    if (!clean) return null;
+
+    // If mobile browser autofilled an international number like +971501234567
+    if (clean.startsWith('+')) {
+      const digitsOnly = clean.replace(/[^\d]/g, '');
+      return digitsOnly.length > 7 ? '+' + digitsOnly : null;
+    }
+
+    // Strip all non-digits (spaces, dashes, parentheses)
+    clean = clean.replace(/[^\d]/g, '');
+    // Strip leading zero common in GCC and UK inputs (e.g., 050 -> 50)
+    clean = clean.replace(/^0+/, '');
+
+    if (clean.length > 5) {
+      return selectedDialCode + clean;
+    }
+    return null;
+  }
+
+  // ---- Local backup queue -------------------------------------------
+  // Every registration is written to localStorage before we even try to
+  // send it. If the Klaviyo request fails (blocked by an ad-blocker /
+  // privacy extension, flaky venue wifi, a bad response, etc.) the entry
+  // stays queued and is retried automatically in the background, so a
+  // busy booth kiosk never silently loses a guest's details.
+  function readQueue() {
+    try {
+      return JSON.parse(localStorage.getItem(QUEUE_KEY)) || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function writeQueue(queue) {
+    try {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch (e) {
+      console.warn("Could not persist local registration queue:", e);
+    }
+  }
+
+  function enqueue(payload) {
+    const queue = readQueue();
+    queue.push({
+      id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      payload: payload,
+      createdAt: new Date().toISOString()
+    });
+    writeQueue(queue);
+    updateSyncStatusUI();
+  }
+
+  function removeFromQueue(id) {
+    writeQueue(readQueue().filter(item => item.id !== id));
+    updateSyncStatusUI();
+  }
+
+  function updateSyncStatusUI() {
+    const el = document.getElementById("lbSyncStatus");
+    if (!el) return;
+    const count = readQueue().length;
+    if (count > 0) {
+      el.textContent = count === 1
+        ? "1 registration syncing in the background..."
+        : count + " registrations syncing in the background...";
+      el.hidden = false;
+    } else {
+      el.hidden = true;
+    }
+  }
+
+  // Single network attempt with a hard timeout so a dead connection can't
+  // hang the kiosk indefinitely. Resolves true only on a real 2xx from Klaviyo.
+  async function sendOnce(payload) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(KLAVIYO_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "revision": "2024-05-15",
+          "Content-Type": "application/vnd.api+json",
+          "Accept": "application/vnd.api+json"
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      return res.ok;
+    } catch (err) {
+      console.warn("Klaviyo submit attempt failed:", err);
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function sendWithRetry(payload, attempts) {
+    for (let i = 0; i < attempts; i++) {
+      if (await sendOnce(payload)) return true;
+      if (i < attempts - 1) {
+        await new Promise(r => setTimeout(r, 400 * (i + 1)));
+      }
+    }
+    return false;
+  }
+
+  let flushInFlight = false;
+  async function flushQueue() {
+    if (flushInFlight) return;
+    if (!navigator.onLine) return;
+    flushInFlight = true;
+    try {
+      const queue = readQueue();
+      for (const item of queue) {
+        const ok = await sendOnce(item.payload);
+        if (ok) removeFromQueue(item.id);
+      }
+    } finally {
+      flushInFlight = false;
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("lbYear").textContent = new Date().getFullYear();
+    updateSyncStatusUI();
+    flushQueue();
+    setInterval(flushQueue, 20000);
+    window.addEventListener("online", flushQueue);
+
+    const form = document.getElementById("LoveBooKlaviyoSignup");
+    const submitBtn = document.getElementById("lbSubmitBtn");
+    const successView = document.getElementById("lbSuccessView");
+    const registerAnotherBtn = document.getElementById("lbRegisterAnotherBtn");
+
+    let autoResetTimer = null;
+
+    function showForm() {
+      if (autoResetTimer) {
+        clearTimeout(autoResetTimer);
+        autoResetTimer = null;
+      }
+      form.reset();
+      successView.style.display = "none";
+      form.style.display = "block";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Sign Up";
+      const firstInput = document.getElementById("LbFirst");
+      if (firstInput) firstInput.focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showSuccess() {
+      form.style.display = "none";
+      successView.style.display = "block";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Kiosk safety net: if staff don't tap "Register Another", the
+      // screen still returns to a blank form on its own for the next guest.
+      autoResetTimer = setTimeout(showForm, 12000);
+    }
+
+    if (registerAnotherBtn) {
+      registerAnotherBtn.addEventListener("click", showForm);
+    }
+
+    if (form) {
+      form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const firstInput = document.getElementById("LbFirst");
+        const emailInput = document.getElementById("LbEmail");
+        const termsInput = document.getElementById("LbTerms");
+
+        // Mobile manual validation check
+        if (!firstInput.value.trim()) {
+          firstInput.focus();
+          return;
+        }
+        if (!emailInput.value.trim() || !emailInput.value.includes('@')) {
+          emailInput.focus();
+          return;
+        }
+        if (!termsInput.checked) {
+          termsInput.focus();
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Registering...";
+
+        const firstName = firstInput.value.trim();
+        const lastName = document.getElementById("LbLast").value.trim();
+        const email = emailInput.value.trim();
+
+        const countryCode = document.getElementById("LbCountryCode").value;
+        const rawPhoneInput = document.getElementById("LbPhoneInput").value;
+        const fullPhone = formatMobilePhone(rawPhoneInput, countryCode);
+
+        const parentChecked = document.querySelector('input[name="parent_status"]:checked');
+        const isParent = parentChecked ? parentChecked.value : "Yes";
+
+        const utmParams = getUrlParams();
+
+        const customProperties = {
+          is_parent: isParent,
+          event: "Dubai Baby Expo 2026",
+          source: utmParams.utm_source || "baby_expo_2026",
+          ...utmParams
+        };
+
+        const profileAttributes = {
+          email: email,
+          first_name: firstName,
+          properties: customProperties
+        };
+
+        if (lastName) {
+          profileAttributes.last_name = lastName;
+        }
+
+        if (fullPhone) {
+          profileAttributes.phone_number = fullPhone;
+        }
+
+        const payload = {
+          data: {
+            type: "subscription",
+            attributes: {
+              custom_source: utmParams.utm_campaign || utmParams.utm_source || "Dubai Baby Expo 2026",
+              profile: {
+                data: {
+                  type: "profile",
+                  attributes: profileAttributes
+                }
+              }
+            },
+            relationships: {
+              list: {
+                data: {
+                  type: "list",
+                  id: KLAVIYO_LIST_ID
+                }
+              }
+            }
+          }
+        };
+
+        if (!navigator.onLine) {
+          // No point hammering the network — queue immediately.
+          enqueue(payload);
+          showSuccess();
+          return;
+        }
+
+        const confirmed = await sendWithRetry(payload, MAX_SEND_ATTEMPTS);
+
+        if (!confirmed) {
+          // Couldn't get a confirmed response from Klaviyo after retries.
+          // Never lose the guest's details: keep them queued locally and
+          // keep retrying in the background, and still let the guest
+          // through so the line at the booth keeps moving.
+          enqueue(payload);
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Sign Up";
+        showSuccess();
+      });
+    }
+
+    // Meadow floral scatter
+    const container = document.getElementById("lbMeadowDecor");
+    if (!container) return;
+
+    const flowers = [
+      "https://cdn.shopify.com/s/files/1/0875/4610/2105/files/Group_1000002344_1.png?v=1771834714",
+      "https://cdn.shopify.com/s/files/1/0875/4610/2105/files/Group_1000002347.svg?v=1771657700",
+      "https://cdn.shopify.com/s/files/1/0875/4610/2105/files/Group_1000002331.svg?v=1771487196"
+    ];
+
+    const count = window.innerWidth < 640 ? 10 : 14;
+    for (let i = 0; i < count; i++) {
+      const item = document.createElement("div");
+      const size = Math.floor(Math.random() * 40 + 35);
+      item.style.position = "absolute";
+      item.style.width = size + "px";
+      item.style.height = size + "px";
+      item.style.backgroundImage = `url('${flowers[i % flowers.length]}')`;
+      item.style.backgroundSize = "contain";
+      item.style.backgroundRepeat = "no-repeat";
+      item.style.opacity = "0.32";
+      item.style.pointerEvents = "none";
+
+      const zone = i % 4;
+      if (zone === 0) { item.style.top = (Math.random() * 22) + "%"; item.style.left = (Math.random() * 20) + "%"; }
+      else if (zone === 1) { item.style.top = (Math.random() * 22) + "%"; item.style.right = (Math.random() * 20) + "%"; }
+      else if (zone === 2) { item.style.bottom = (Math.random() * 22) + "%"; item.style.left = (Math.random() * 20) + "%"; }
+      else { item.style.bottom = (Math.random() * 22) + "%"; item.style.right = (Math.random() * 20) + "%"; }
+
+      item.style.transform = `rotate(${Math.floor(Math.random() * 360)}deg)`;
+      container.appendChild(item);
+    }
+  });
+</script>
+
+</body>
+</html>
