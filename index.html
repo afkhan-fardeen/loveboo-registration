@@ -6,6 +6,13 @@
 <title>Love Boo | Baby Expo 2026 Registration</title>
 <meta name="description" content="Register for Love Boo at Dubai Baby Expo 2026 and collect your gift bag at our booth.">
 <link rel="icon" href="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=32">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#006D68">
+<link rel="apple-touch-icon" href="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=180">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Love Boo">
+<meta name="mobile-web-app-capable" content="yes">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
 <style>
@@ -730,6 +737,14 @@
     } finally {
       flushInFlight = false;
     }
+  }
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("/sw.js").catch(function(err) {
+        console.warn("Service worker registration failed:", err);
+      });
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function() {
