@@ -15,6 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -359,6 +360,93 @@
     opacity: 0.9;
   }
 
+  /* Spin-to-win wheel */
+  .lb-wheel-view {
+    display: none;
+    text-align: center;
+    padding: 0.5rem 0 0.5rem;
+  }
+  .lb-wheel-view h2 {
+    color: #005151;
+    margin: 0 0 0.35rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  .lb-wheel-view p {
+    color: #005151;
+    font-size: 0.85rem;
+    opacity: 0.85;
+    margin: 0 0 1.25rem;
+  }
+  .lb-wheel-stage {
+    position: relative;
+    width: min(72vw, 19rem);
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 1.5rem;
+  }
+  .lb-wheel-pointer {
+    position: absolute;
+    top: -0.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 0.9rem solid transparent;
+    border-right: 0.9rem solid transparent;
+    border-top: 1.4rem solid #005151;
+    z-index: 3;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+  }
+  .lb-wheel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 0.35rem solid #FCF9F1;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 81, 81, 0.25), 0 0 0 0.25rem #006D68;
+    background: conic-gradient(
+      #F8B5C4 0deg 60deg,
+      #FBD872 60deg 120deg,
+      #D7C6E6 120deg 180deg,
+      #C3DC93 180deg 240deg,
+      #9FD3CE 240deg 300deg,
+      #CFC9B8 300deg 360deg
+    );
+    will-change: transform;
+  }
+  .lb-wheel-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44%;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #005151;
+    line-height: 1.15;
+    transform-origin: 0 0;
+  }
+  .lb-wheel-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3rem;
+    height: 3rem;
+    transform: translate(-50%, -50%);
+    background: #006D68;
+    border: 0.25rem solid #FCF9F1;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.2);
+  }
+  .lb-wheel-status {
+    min-height: 1.3rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #006D68;
+    margin: 0 0 0.9rem;
+  }
+
   .lb-footer {
     position: relative;
     z-index: 2;
@@ -391,6 +479,7 @@
     .lb-phone-input-wrap input,
     .lb-country-code-select select,
     .lb-toggle-box { min-height: 3.5rem; }
+    .lb-wheel-stage { width: min(50vw, 24rem); }
   }
 
   /* Touch devices (phones, tablets, touch kiosks): guarantee comfortably
@@ -415,6 +504,7 @@
     .lb-event-wrapper { gap: 1rem; padding-top: 1rem; padding-bottom: 1rem; }
     .lb-brand { margin-bottom: 0.75rem; }
     .lb-row { margin-bottom: 0.6rem; }
+    .lb-wheel-stage { width: min(40vh, 14rem); margin-bottom: 0.75rem; }
   }
 
   @media (max-width: 30rem) {
@@ -471,9 +561,23 @@
           <path d="M4 12.5L9.5 18L20 6" stroke="#006D68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <h2>Thank you!</h2>
-      <p>You're registered. Show this screen at our booth to collect your gift bag.</p>
+      <h2 id="lbSuccessTitle">Thank you!</h2>
+      <p id="lbSuccessMessage">You're registered. Show this screen at our booth to collect your gift bag.</p>
       <button type="button" id="lbRegisterAnotherBtn" class="lb-btn lb-btn-secondary">Register Another Guest</button>
+    </div>
+
+    <!-- Spin-to-Win Wheel -->
+    <div id="lbWheelView" class="lb-wheel-view">
+      <h2>You're in! Spin to win.</h2>
+      <p>One spin for a chance at a gift &mdash; good luck!</p>
+      <div class="lb-wheel-stage">
+        <div class="lb-wheel-pointer" aria-hidden="true"></div>
+        <div class="lb-wheel" id="lbWheel" aria-hidden="true">
+          <div class="lb-wheel-hub"></div>
+        </div>
+      </div>
+      <p id="lbWheelStatus" class="lb-wheel-status" aria-live="polite"></p>
+      <button type="button" id="lbSpinBtn" class="lb-btn">Spin the Wheel</button>
     </div>
 
     <!-- Client Form -->
@@ -757,9 +861,63 @@
     const form = document.getElementById("LoveBooKlaviyoSignup");
     const submitBtn = document.getElementById("lbSubmitBtn");
     const successView = document.getElementById("lbSuccessView");
+    const successTitle = document.getElementById("lbSuccessTitle");
+    const successMessage = document.getElementById("lbSuccessMessage");
     const registerAnotherBtn = document.getElementById("lbRegisterAnotherBtn");
+    const wheelView = document.getElementById("lbWheelView");
+    const wheelEl = document.getElementById("lbWheel");
+    const wheelStatus = document.getElementById("lbWheelStatus");
+    const spinBtn = document.getElementById("lbSpinBtn");
+
+    // ---- Spin-to-win wheel ----------------------------------------------
+    // 5 gift placeholders + 1 "Try Again" — swap the placeholder names for
+    // real prizes whenever the product list is finalized.
+    const WHEEL_SEGMENTS = ["Gift 1", "Gift 2", "Gift 3", "Gift 4", "Gift 5", "Try Again"];
+    const SEGMENT_ANGLE = 360 / WHEEL_SEGMENTS.length;
+
+    // Radius is derived from the wheel's actual rendered size (not a fixed
+    // rem value) so labels sit at the same proportional spot on any screen
+    // size, from a phone up through a large kiosk display.
+    function layoutWheelLabels() {
+      wheelEl.querySelectorAll(".lb-wheel-label").forEach(function(el) { el.remove(); });
+      const radiusPx = wheelEl.getBoundingClientRect().width * 0.34;
+      WHEEL_SEGMENTS.forEach(function(label, i) {
+        const midAngle = i * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
+        const el = document.createElement("div");
+        el.className = "lb-wheel-label";
+        el.textContent = label;
+        el.style.transform = "rotate(" + midAngle + "deg) translate(0, -" + radiusPx + "px)";
+        wheelEl.appendChild(el);
+      });
+    }
+
+    // The wheel view starts hidden (display: none), so its width would read
+    // as 0 here — labels are laid out once it's actually shown instead.
+    let resizeTimer = null;
+    window.addEventListener("resize", function() {
+      if (wheelView.style.display !== "block") return;
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(layoutWheelLabels, 150);
+    });
+
+    let currentRotation = 0;
+    let spinCount = 0;
+    let spinning = false;
+    let pendingKlaviyoPayload = null;
+    let pendingSupabaseRow = null;
 
     let autoResetTimer = null;
+
+    function resetWheel() {
+      currentRotation = 0;
+      spinCount = 0;
+      spinning = false;
+      wheelEl.style.transition = "none";
+      wheelEl.style.transform = "rotate(0deg)";
+      wheelStatus.textContent = "";
+      spinBtn.disabled = false;
+      spinBtn.textContent = "Spin the Wheel";
+    }
 
     function showForm() {
       if (autoResetTimer) {
@@ -768,6 +926,8 @@
       }
       form.reset();
       successView.style.display = "none";
+      wheelView.style.display = "none";
+      resetWheel();
       form.style.display = "block";
       submitBtn.disabled = false;
       submitBtn.textContent = "Sign Up";
@@ -776,13 +936,105 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function showSuccess() {
+    function showWheel() {
       form.style.display = "none";
+      wheelView.style.display = "block";
+      layoutWheelLabels();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showSuccess(prize) {
+      wheelView.style.display = "none";
+      if (prize) {
+        successTitle.textContent = "You won: " + prize + "!";
+        successMessage.textContent = "Show this screen at our booth to collect your gift.";
+      } else {
+        successTitle.textContent = "Thanks for playing!";
+        successMessage.textContent = "You're registered — no prize this time, but keep an eye out for future giveaways.";
+      }
       successView.style.display = "block";
       window.scrollTo({ top: 0, behavior: 'smooth' });
       // Kiosk safety net: if staff don't tap "Register Another", the
       // screen still returns to a blank form on its own for the next guest.
       autoResetTimer = setTimeout(showForm, 12000);
+    }
+
+    async function finalizeRegistration(prize) {
+      pendingKlaviyoPayload.data.attributes.profile.data.attributes.properties.prize = prize || "None";
+      pendingSupabaseRow.prize = prize || null;
+
+      if (!navigator.onLine) {
+        enqueue(KLAVIYO_QUEUE_KEY, pendingKlaviyoPayload);
+        enqueue(SUPABASE_QUEUE_KEY, pendingSupabaseRow);
+        showSuccess(prize);
+        return;
+      }
+
+      // Send to both destinations independently — a failure in one
+      // (e.g. Klaviyo blocked by an ad-blocker) must not stop the other
+      // (Supabase, your source of truth for the admin list) from saving,
+      // and vice versa. Each has its own retry + local backup queue.
+      const [klaviyoConfirmed, supabaseConfirmed] = await Promise.all([
+        sendWithRetry(sendKlaviyoOnce, pendingKlaviyoPayload, MAX_SEND_ATTEMPTS),
+        sendWithRetry(sendSupabaseOnce, pendingSupabaseRow, MAX_SEND_ATTEMPTS)
+      ]);
+
+      if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, pendingKlaviyoPayload);
+      if (!supabaseConfirmed) enqueue(SUPABASE_QUEUE_KEY, pendingSupabaseRow);
+
+      showSuccess(prize);
+    }
+
+    function onLanded(idx) {
+      spinning = false;
+      const label = WHEEL_SEGMENTS[idx];
+
+      if (label === "Try Again" && spinCount < 2) {
+        wheelStatus.textContent = "So close! One more spin...";
+        spinBtn.disabled = false;
+        spinBtn.textContent = "Spin Again";
+        return;
+      }
+
+      const prize = label === "Try Again" ? null : label;
+      wheelStatus.textContent = prize ? "Landed on " + prize + "!" : "No prize this time.";
+      spinBtn.disabled = true;
+      finalizeRegistration(prize);
+    }
+
+    function spinWheel() {
+      if (spinning || typeof anime === "undefined") return;
+      spinning = true;
+      spinCount++;
+      spinBtn.disabled = true;
+      wheelStatus.textContent = "Spinning...";
+
+      const targetIndex = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
+      const midAngle = targetIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
+      // Small random jitter so it doesn't land dead-center every time,
+      // kept well within the segment so it never reads as a neighbor.
+      const jitter = (Math.random() - 0.5) * (SEGMENT_ANGLE * 0.6);
+      const targetMod = ((360 - (midAngle + jitter)) % 360 + 360) % 360;
+      const fullSpins = 5 + Math.floor(Math.random() * 3);
+      const currentMod = ((currentRotation % 360) + 360) % 360;
+      const forwardDelta = ((targetMod - currentMod) + 360) % 360;
+      const finalRotation = currentRotation + fullSpins * 360 + forwardDelta;
+
+      wheelEl.style.transition = "none";
+      anime({
+        targets: wheelEl,
+        rotate: finalRotation,
+        duration: 4200,
+        easing: "cubicBezier(.17, .67, .16, .99)",
+        complete: function() {
+          currentRotation = finalRotation;
+          onLanded(targetIndex);
+        }
+      });
+    }
+
+    if (spinBtn) {
+      spinBtn.addEventListener("click", spinWheel);
     }
 
     if (registerAnotherBtn) {
@@ -813,7 +1065,7 @@
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = "Registering...";
+        submitBtn.textContent = "One sec...";
 
         const firstName = firstInput.value.trim();
         const lastName = document.getElementById("LbLast").value.trim();
@@ -886,31 +1138,16 @@
           utm_content: utmParams.utm_content || null
         };
 
-        if (!navigator.onLine) {
-          // No point hammering the network — queue both immediately.
-          enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
-          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Sign Up";
-          showSuccess();
-          return;
-        }
-
-        // Send to both destinations independently — a failure in one
-        // (e.g. Klaviyo blocked by an ad-blocker) must not stop the other
-        // (Supabase, your source of truth for the admin list) from saving,
-        // and vice versa. Each has its own retry + local backup queue.
-        const [klaviyoConfirmed, supabaseConfirmed] = await Promise.all([
-          sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS),
-          sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS)
-        ]);
-
-        if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
-        if (!supabaseConfirmed) enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
+        // Hold onto the built payloads — they're only sent once the guest
+        // has spun the wheel, so the prize can be included in the same
+        // record instead of needing a separate update afterwards.
+        pendingKlaviyoPayload = klaviyoPayload;
+        pendingSupabaseRow = supabaseRow;
 
         submitBtn.disabled = false;
         submitBtn.textContent = "Sign Up";
-        showSuccess();
+        resetWheel();
+        showWheel();
       });
     }
 
