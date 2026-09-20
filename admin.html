@@ -703,12 +703,21 @@
     loadPrizes();
   });
 
-  // Live updates: new registrations appear without needing a manual refresh.
+  // Live updates: new registrations appear, and prizes fill in the moment
+  // the booth's big screen (wheel.html) finishes someone's spin — without
+  // needing a manual refresh either way.
   sbClient
     .channel("registrations-changes")
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, function(payload) {
       allRows = [payload.new].concat(allRows);
       applyFilter();
+    })
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, function(payload) {
+      const idx = allRows.findIndex(function(r) { return r.id === payload.new.id; });
+      if (idx !== -1) {
+        allRows[idx] = payload.new;
+        applyFilter();
+      }
     })
     .subscribe();
 

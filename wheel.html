@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Love Boo | Spin to Win</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#006D68">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* Fluid scale tuned for a large always-on display rather than a phone —
+     starts bigger and grows further on big screens/TVs. */
+  html { font-size: clamp(18px, 1vw + 12px, 34px); }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #FCF9F1;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #005151;
+    height: 100vh;
+    height: 100dvh;
+  }
+
+  .lb-stage {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1.5rem, 4vh, 3rem) clamp(1.5rem, 4vw, 4rem);
+    overflow: hidden;
+  }
+
+  .lb-meadow-decor {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .lb-svg-bloom { position: absolute; opacity: 0.28; pointer-events: none; }
+  .lb-svg-tl { top: -1.5rem; left: -1.5rem; width: 8rem; height: 8rem; transform: rotate(-10deg); }
+  .lb-svg-tr { top: -1rem; right: -1.5rem; width: 9rem; height: 9rem; transform: rotate(15deg); }
+  .lb-svg-bl { bottom: 4%; left: -1rem; width: 8.5rem; height: 8.5rem; transform: rotate(20deg); }
+  .lb-svg-br { bottom: 3%; right: -1rem; width: 10rem; height: 10rem; transform: rotate(-6deg); }
+
+  .lb-brand {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-bottom: clamp(1rem, 3vh, 2rem);
+  }
+  .lb-brand img { max-width: 9rem; width: 100%; height: auto; display: block; margin: 0 auto; }
+  .lb-brand p {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #005151;
+    opacity: 0.85;
+    margin: 0.5rem 0 0;
+  }
+
+  /* ---- Idle / attract screen ---- */
+  .lb-idle {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 44rem;
+  }
+  .lb-idle h1 {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    color: #005151;
+    margin: 0 0 0.5rem;
+  }
+  .lb-idle p.lb-idle-sub {
+    font-size: 1rem;
+    color: #005151;
+    opacity: 0.8;
+    margin: 0 0 1.75rem;
+  }
+  .lb-idle-panels {
+    display: flex;
+    align-items: center;
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .lb-idle-qr {
+    background: #fff;
+    border-radius: 1.25rem;
+    padding: 1rem;
+    box-shadow: 0 0.75rem 2rem rgba(0, 81, 81, 0.18);
+  }
+  .lb-idle-qr canvas { display: block; border-radius: 0.5rem; }
+  .lb-idle-qr-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #006D68;
+    margin: 0.6rem 0 0;
+  }
+
+  .lb-prize-strip {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 22rem;
+  }
+  .lb-prize-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 5.5rem;
+  }
+  .lb-prize-chip img {
+    width: 4.5rem;
+    height: 4.5rem;
+    object-fit: contain;
+    margin-bottom: 0.4rem;
+    filter: drop-shadow(0 0.2rem 0.4rem rgba(0,0,0,0.15));
+  }
+  .lb-prize-chip span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #005151;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  /* ---- Wheel (idle wheel preview + live spin) ---- */
+  .lb-wheel-wrap {
+    position: relative;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+  }
+  .lb-wheel-wrap.active { display: flex; }
+  .lb-spin-announce {
+    font-size: clamp(1.4rem, 3vw, 2.1rem);
+    font-weight: 700;
+    color: #005151;
+    margin: 0 0 1.25rem;
+    text-align: center;
+  }
+  .lb-wheel-stage {
+    position: relative;
+    width: min(60vh, 34rem);
+    aspect-ratio: 1 / 1;
+  }
+  .lb-wheel-pointer {
+    position: absolute;
+    top: -0.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 1.3rem solid transparent;
+    border-right: 1.3rem solid transparent;
+    border-top: 2rem solid #005151;
+    z-index: 3;
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.2));
+  }
+  .lb-wheel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 0.5rem solid #FCF9F1;
+    box-shadow: 0 1rem 3rem rgba(0, 81, 81, 0.3), 0 0 0 0.35rem #006D68;
+    background: #E3EABA;
+    will-change: transform;
+  }
+  .lb-wheel-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    font-weight: 800;
+    color: #005151;
+    line-height: 1.1;
+    transform-origin: 0 0;
+  }
+  .lb-wheel-label img {
+    display: block;
+    object-fit: contain;
+    margin-bottom: 0.3rem;
+    filter: drop-shadow(0 0.15rem 0.35rem rgba(0,0,0,0.2));
+  }
+  .lb-wheel-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 4.5rem;
+    height: 4.5rem;
+    transform: translate(-50%, -50%);
+    background: #006D68;
+    border: 0.35rem solid #FCF9F1;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0.3rem 0.7rem rgba(0, 0, 0, 0.25);
+  }
+
+  /* ---- Result reveal (the wheel hides, this takes over) ---- */
+  .lb-reveal {
+    position: relative;
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .lb-reveal.active { display: flex; animation: lb-reveal-in 0.5s cubic-bezier(.2,.8,.2,1); }
+  @keyframes lb-reveal-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .lb-reveal img {
+    width: min(40vh, 16rem);
+    height: min(40vh, 16rem);
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 1rem 2rem rgba(0,0,0,0.2));
+  }
+  .lb-reveal-badge {
+    width: 6rem;
+    height: 6rem;
+    border-radius: 50%;
+    background: #E3EABA;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .lb-reveal-badge svg { width: 3rem; height: 3rem; }
+  .lb-reveal-name {
+    font-size: clamp(1.3rem, 2.6vw, 1.8rem);
+    font-weight: 700;
+    color: #006D68;
+    margin: 0 0 0.5rem;
+  }
+  .lb-reveal-prize {
+    font-size: clamp(2rem, 4.5vw, 3.2rem);
+    font-weight: 800;
+    color: #005151;
+    margin: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .lb-idle-panels { flex-direction: column; gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lb-stage">
+  <div class="lb-meadow-decor" aria-hidden="true">
+    <svg class="lb-svg-bloom lb-svg-tl" viewBox="0 0 100 100" fill="none">
+      <path d="M20 90C35 65 50 45 65 20" stroke="#006D68" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="68" cy="22" r="14" fill="#F8B5C4"/><circle cx="68" cy="22" r="6" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-tr" viewBox="0 0 120 120" fill="none">
+      <path d="M95 110C80 75 65 50 40 30" stroke="#005151" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="40" cy="30" r="7" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-bl" viewBox="0 0 110 110" fill="none">
+      <path d="M30 95C40 65 55 45 75 30" stroke="#006D68" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="75" cy="30" r="6" fill="#FBD872"/>
+    </svg>
+    <svg class="lb-svg-bloom lb-svg-br" viewBox="0 0 130 130" fill="none">
+      <path d="M100 120C80 85 60 55 50 15" stroke="#005151" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="50" cy="18" r="13" fill="#D7C6E6"/>
+    </svg>
+  </div>
+
+  <div class="lb-brand">
+    <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250" alt="Love Boo">
+    <p>Baby Expo 2026 &mdash; Spin to Win</p>
+  </div>
+
+  <!-- Idle / attract state -->
+  <div class="lb-idle" id="lbIdle">
+    <h1>Sign up to spin &amp; win!</h1>
+    <p class="lb-idle-sub">Scan the code, register in seconds, and watch your spin right here.</p>
+    <div class="lb-idle-panels">
+      <div class="lb-idle-qr">
+        <canvas id="lbQrCanvas"></canvas>
+        <p class="lb-idle-qr-label">Scan to register</p>
+      </div>
+      <div class="lb-prize-strip" id="lbPrizeStrip"></div>
+    </div>
+  </div>
+
+  <!-- Live spin state -->
+  <div class="lb-wheel-wrap" id="lbWheelWrap">
+    <p class="lb-spin-announce" id="lbSpinAnnounce"></p>
+    <div class="lb-wheel-stage">
+      <div class="lb-wheel-pointer" aria-hidden="true"></div>
+      <div class="lb-wheel" id="lbWheel" aria-hidden="true">
+        <div class="lb-wheel-hub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result reveal state -->
+  <div class="lb-reveal" id="lbReveal">
+    <img id="lbRevealImage" alt="" hidden>
+    <div class="lb-reveal-badge" id="lbRevealBadge" hidden>
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 12.5L9.5 18L20 6" stroke="#006D68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <p class="lb-reveal-name" id="lbRevealName"></p>
+    <p class="lb-reveal-prize" id="lbRevealPrize"></p>
+  </div>
+</div>
+
+<script>
+  const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const idleView = document.getElementById("lbIdle");
+  const wheelWrap = document.getElementById("lbWheelWrap");
+  const wheelEl = document.getElementById("lbWheel");
+  const spinAnnounce = document.getElementById("lbSpinAnnounce");
+  const revealView = document.getElementById("lbReveal");
+  const revealImage = document.getElementById("lbRevealImage");
+  const revealBadge = document.getElementById("lbRevealBadge");
+  const revealName = document.getElementById("lbRevealName");
+  const revealPrize = document.getElementById("lbRevealPrize");
+  const prizeStrip = document.getElementById("lbPrizeStrip");
+
+  const TRY_AGAIN = { name: "Try Again", image_url: null };
+  const SEGMENT_COLORS = ["#F8B5C4", "#FBD872", "#D7C6E6", "#C3DC93", "#9FD3CE"];
+  const TRY_AGAIN_COLOR = "#CFC9B8";
+
+  let wheelSegments = [TRY_AGAIN];
+  let segmentAngle = 360;
+  let currentRotation = 0;
+
+  // ---- QR code + idle prize preview --------------------------------------
+  function renderQr() {
+    const canvas = document.getElementById("lbQrCanvas");
+    const url = window.location.origin + "/";
+    if (window.QRCode && canvas) {
+      QRCode.toCanvas(canvas, url, { width: 168, margin: 1, color: { dark: "#005151", light: "#FFFFFF" } }, function(err) {
+        if (err) console.warn("QR render failed:", err);
+      });
+    }
+  }
+
+  async function fetchActivePrizes() {
+    try {
+      const { data, error } = await sbClient
+        .from("prizes")
+        .select("name, image_url")
+        .eq("active", true)
+        .order("sort_order", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.warn("Could not load prizes:", err);
+      return [];
+    }
+  }
+
+  function renderPrizeStrip(prizes) {
+    if (!prizes.length) {
+      prizeStrip.innerHTML = "";
+      return;
+    }
+    prizeStrip.innerHTML = prizes.map(function(p) {
+      const img = p.image_url
+        ? '<img src="' + p.image_url + '" alt="">'
+        : '';
+      return '<div class="lb-prize-chip">' + img + '<span>' + escapeHtml(p.name) + '</span></div>';
+    }).join("");
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
+  // ---- Wheel building ------------------------------------------------------
+  function setWheelSegments(prizes) {
+    const gifts = prizes.length ? prizes : [{ name: "Mystery Gift", image_url: null }];
+    wheelSegments = gifts.concat([TRY_AGAIN]);
+    segmentAngle = 360 / wheelSegments.length;
+
+    const stops = wheelSegments.map(function(seg, i) {
+      const color = seg === TRY_AGAIN ? TRY_AGAIN_COLOR : SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+      return color + " " + (i * segmentAngle) + "deg " + ((i + 1) * segmentAngle) + "deg";
+    });
+    wheelEl.style.background = "conic-gradient(" + stops.join(", ") + ")";
+  }
+
+  // Images render at their natural size (no background disc) so transparent
+  // prize photos sit directly on the wheel colour. Size is derived from the
+  // wheel's actual rendered radius and each segment's angle, so the image
+  // fills its wedge nicely whether there are 2 segments or 6.
+  function layoutWheelLabels() {
+    wheelEl.querySelectorAll(".lb-wheel-label").forEach(function(el) { el.remove(); });
+    const radiusPx = wheelEl.getBoundingClientRect().width / 2;
+    const labelRadiusPx = radiusPx * 0.6;
+    const angleRad = (segmentAngle * Math.PI) / 180;
+    const chordPx = 2 * labelRadiusPx * Math.sin(angleRad / 2);
+    const imgSizePx = Math.max(48, Math.min(chordPx * 0.85, radiusPx * 0.6));
+
+    wheelSegments.forEach(function(seg, i) {
+      const midAngle = i * segmentAngle + segmentAngle / 2;
+      const el = document.createElement("div");
+      el.className = "lb-wheel-label";
+      el.style.width = (chordPx * 0.95) + "px";
+      el.style.fontSize = Math.max(13, imgSizePx * 0.16) + "px";
+      if (seg.image_url) {
+        const img = document.createElement("img");
+        img.src = seg.image_url;
+        img.alt = "";
+        img.style.width = imgSizePx + "px";
+        img.style.height = imgSizePx + "px";
+        img.onerror = function() { img.remove(); };
+        el.appendChild(img);
+      }
+      const text = document.createElement("span");
+      text.textContent = seg.name;
+      el.appendChild(text);
+      el.style.transform = "rotate(" + midAngle + "deg) translate(0, -" + labelRadiusPx + "px)";
+      wheelEl.appendChild(el);
+    });
+  }
+
+  function resetWheelRotation() {
+    currentRotation = 0;
+    wheelEl.style.transition = "none";
+    wheelEl.style.transform = "rotate(0deg)";
+  }
+
+  function spinToIndex(targetIndex) {
+    return new Promise(function(resolve) {
+      const midAngle = targetIndex * segmentAngle + segmentAngle / 2;
+      const jitter = (Math.random() - 0.5) * (segmentAngle * 0.6);
+      const targetMod = ((360 - (midAngle + jitter)) % 360 + 360) % 360;
+      const fullSpins = 6 + Math.floor(Math.random() * 3);
+      const currentMod = ((currentRotation % 360) + 360) % 360;
+      const forwardDelta = ((targetMod - currentMod) + 360) % 360;
+      const finalRotation = currentRotation + fullSpins * 360 + forwardDelta;
+
+      wheelEl.style.transition = "none";
+      anime({
+        targets: wheelEl,
+        rotate: finalRotation,
+        duration: 5200,
+        easing: "cubicBezier(.15, .65, .15, 1)",
+        complete: function() {
+          currentRotation = finalRotation;
+          resolve();
+        }
+      });
+    });
+  }
+
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  // ---- Queue processing ------------------------------------------------
+  let queue = [];
+  let queuedIds = new Set();
+  let processing = false;
+
+  function enqueueRegistration(row) {
+    if (queuedIds.has(row.id)) return;
+    queuedIds.add(row.id);
+    queue.push(row);
+    processQueue();
+  }
+
+  async function fetchPendingQueue() {
+    try {
+      const { data, error } = await sbClient
+        .from("registrations")
+        .select("id, first_name, created_at, spin_status")
+        .eq("spin_status", "pending")
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.warn("Could not load pending queue:", err);
+      return [];
+    }
+  }
+
+  async function completeSpin(id, prize) {
+    try {
+      const { error } = await sbClient
+        .from("registrations")
+        .update({ prize: prize, spin_status: "completed" })
+        .eq("id", id);
+      if (error) console.warn("Could not save spin result:", error.message);
+    } catch (err) {
+      console.warn("Could not save spin result:", err);
+    }
+  }
+
+  function showIdle() {
+    idleView.style.display = "flex";
+    wheelWrap.classList.remove("active");
+    revealView.classList.remove("active");
+  }
+
+  function showWheel(firstName) {
+    idleView.style.display = "none";
+    revealView.classList.remove("active");
+    spinAnnounce.textContent = firstName ? firstName + " is up! Spinning..." : "Spinning...";
+    wheelWrap.classList.add("active");
+  }
+
+  function showReveal(firstName, prize, imageUrl) {
+    wheelWrap.classList.remove("active");
+    revealName.textContent = firstName ? firstName + "!" : "Congratulations!";
+    if (prize) {
+      revealPrize.textContent = prize;
+      if (imageUrl) {
+        revealImage.src = imageUrl;
+        revealImage.hidden = false;
+        revealBadge.hidden = true;
+      } else {
+        revealImage.hidden = true;
+        revealBadge.hidden = false;
+      }
+    } else {
+      revealPrize.textContent = "Thanks for playing!";
+      revealImage.hidden = true;
+      revealBadge.hidden = false;
+    }
+    revealView.classList.add("active");
+  }
+
+  async function processQueue() {
+    if (processing) return;
+    processing = true;
+    try {
+      while (queue.length) {
+        const row = queue.shift();
+
+        const prizes = await fetchActivePrizes();
+        setWheelSegments(prizes);
+        resetWheelRotation();
+        showWheel(row.first_name);
+        layoutWheelLabels();
+
+        // Small beat before spinning so the announcement is readable.
+        await sleep(1200);
+
+        let spinCount = 0;
+        let finalPrize = null;
+        let finalPrizeImage = null;
+        while (true) {
+          spinCount++;
+          const targetIndex = Math.floor(Math.random() * wheelSegments.length);
+          await spinToIndex(targetIndex);
+          const seg = wheelSegments[targetIndex];
+
+          if (seg === TRY_AGAIN && spinCount < 2) {
+            spinAnnounce.textContent = "So close! One more spin for " + (row.first_name || "you") + "...";
+            await sleep(1400);
+            continue;
+          }
+
+          finalPrize = seg === TRY_AGAIN ? null : seg.name;
+          finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
+          break;
+        }
+
+        // Let the result sit on the wheel for a beat before it hides and
+        // the big reveal takes over.
+        await sleep(2500);
+
+        await completeSpin(row.id, finalPrize);
+        showReveal(row.first_name, finalPrize, finalPrizeImage);
+
+        await sleep(6000);
+      }
+    } finally {
+      processing = false;
+      if (queue.length) {
+        processQueue();
+      } else {
+        showIdle();
+      }
+    }
+  }
+
+  // ---- Boot ---------------------------------------------------------------
+  async function boot() {
+    renderQr();
+    const prizes = await fetchActivePrizes();
+    renderPrizeStrip(prizes);
+    showIdle();
+
+    const pending = await fetchPendingQueue();
+    pending.forEach(enqueueRegistration);
+
+    sbClient
+      .channel("registrations-inserts")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, function(payload) {
+        if (payload.new && payload.new.spin_status === "pending") {
+          enqueueRegistration(payload.new);
+        }
+      })
+      .subscribe();
+
+    // Belt-and-suspenders: catch anything missed by realtime (network blip,
+    // tab backgrounded, etc.) and refresh the idle prize preview.
+    setInterval(async function() {
+      const stillPending = await fetchPendingQueue();
+      stillPending.forEach(enqueueRegistration);
+      if (!processing && !queue.length) {
+        const latest = await fetchActivePrizes();
+        renderPrizeStrip(latest);
+      }
+    }, 20000);
+
+    window.addEventListener("resize", function() {
+      if (wheelWrap.classList.contains("active")) layoutWheelLabels();
+    });
+  }
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+      navigator.serviceWorker.register("/sw.js").catch(function() {});
+    });
+  }
+
+  boot();
+</script>
+
+</body>
+</html>
