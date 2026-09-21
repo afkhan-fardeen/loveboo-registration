@@ -3,7 +3,7 @@
 // existing retry/backup-queue logic in the pages keeps working exactly as
 // before. This only makes the page itself load instantly (and even offline)
 // on a kiosk with flaky venue wifi.
-const CACHE_VERSION = "lb-shell-v4";
+const CACHE_VERSION = "lb-shell-v5";
 const SHELL_ASSETS = [
   "/",
   "/index.html",

@@ -271,8 +271,19 @@
     font-size: 0.85rem;
     font-weight: 600;
     color: #005151;
-    margin: 0 0 0.7rem;
+    margin: 0 0 0.3rem;
     word-break: break-word;
+  }
+  .lb-prize-card .lb-prize-stock {
+    font-size: 0.72rem;
+    color: #006D68;
+    opacity: 0.85;
+    margin: 0 0 0.7rem;
+  }
+  .lb-prize-card .lb-prize-stock.lb-prize-stock-out {
+    color: #A5321F;
+    opacity: 1;
+    font-weight: 600;
   }
   .lb-prize-card .lb-btn-sm {
     width: 100%;
@@ -380,6 +391,10 @@
       <div class="lb-field">
         <label for="lbPrizeImage">Prize image</label>
         <input type="file" id="lbPrizeImage" accept="image/*" required>
+      </div>
+      <div class="lb-field" style="flex: 0 0 8rem;">
+        <label for="lbPrizeQuantity">Quantity</label>
+        <input type="number" id="lbPrizeQuantity" placeholder="Unlimited" min="1" step="1">
       </div>
       <button type="submit" id="lbPrizeAddBtn" class="lb-btn-sm">Add Prize</button>
     </form>
@@ -581,6 +596,7 @@
   const prizeForm = document.getElementById("lbPrizeForm");
   const prizeNameInput = document.getElementById("lbPrizeName");
   const prizeImageInput = document.getElementById("lbPrizeImage");
+  const prizeQuantityInput = document.getElementById("lbPrizeQuantity");
   const prizeAddBtn = document.getElementById("lbPrizeAddBtn");
   const prizeError = document.getElementById("lbPrizeError");
   const prizeGrid = document.getElementById("lbPrizeGrid");
@@ -598,10 +614,16 @@
       const thumb = p.image_url
         ? '<div class="lb-prize-thumb"><img src="' + escapeHtml(p.image_url) + '" alt=""></div>'
         : '<div class="lb-prize-thumb">No image</div>';
+      const given = p.given_count || 0;
+      const stockLabel = p.quantity == null
+        ? given + " given &middot; unlimited"
+        : given + " / " + p.quantity + " given";
+      const stockClass = p.quantity != null && given >= p.quantity ? " lb-prize-stock-out" : "";
       return (
         '<div class="lb-prize-card" data-id="' + p.id + '">' +
         thumb +
         '<p class="lb-prize-name">' + escapeHtml(p.name) + "</p>" +
+        '<p class="lb-prize-stock' + stockClass + '">' + stockLabel + "</p>" +
         '<button type="button" class="lb-btn-sm lb-prize-remove-btn">Remove</button>' +
         "</div>"
       );
@@ -654,10 +676,14 @@
 
       const { data: publicUrlData } = sbClient.storage.from("prize-images").getPublicUrl(path);
 
+      const quantityRaw = prizeQuantityInput.value.trim();
+      const quantity = quantityRaw ? parseInt(quantityRaw, 10) : null;
+
       const { error: insertError } = await sbClient.from("prizes").insert({
         name: name,
         image_url: publicUrlData.publicUrl,
         image_path: path,
+        quantity: quantity,
         sort_order: Date.now()
       });
 

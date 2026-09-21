@@ -15,6 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -359,48 +360,96 @@
     display: block;
   }
 
-  /* Waiting-for-the-big-screen state */
-  .lb-waiting-view {
-    display: none;
+  /* ---- Landing / attract view ---- */
+  .lb-landing {
     text-align: center;
-    padding: 2.5rem 1rem;
   }
-  .lb-waiting-badge {
-    width: 3.5rem;
-    height: 3.5rem;
+  .lb-landing h1 {
+    font-size: 1.3rem;
+    color: #005151;
+    margin: 0 0 0.4rem;
+    font-weight: 700;
+  }
+  .lb-landing-sub {
+    font-size: 0.88rem;
+    color: #005151;
+    opacity: 0.8;
+    margin: 0 0 1.5rem;
+  }
+
+  /* ---- Wheel (shared by the landing preview and the live spin) ---- */
+  .lb-wheel-stage {
+    position: relative;
+    width: min(78vw, 21rem);
+    aspect-ratio: 1 / 1;
     margin: 0 auto 1.25rem;
+  }
+  .lb-wheel-pointer {
+    position: absolute;
+    top: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 1rem solid transparent;
+    border-right: 1rem solid transparent;
+    border-top: 1.55rem solid #005151;
+    z-index: 3;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.15));
+  }
+  .lb-wheel {
+    position: relative;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
+    border: 0.4rem solid #FCF9F1;
+    box-shadow: 0 0.6rem 1.75rem rgba(0, 81, 81, 0.25), 0 0 0 0.3rem #006D68;
     background: #E3EABA;
+    will-change: transform;
+  }
+  /* Positioned via computed left/top in JS (not CSS transform) — a
+     transform-based "rotate + translate" approach was what caused prize
+     images to drift toward the segment border instead of sitting centered
+     in their own wedge; plain trig-based coordinates avoid that entirely. */
+  .lb-wheel-label {
+    position: absolute;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
+    text-align: center;
+    font-weight: 800;
+    color: #005151;
+    line-height: 1.12;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
-  .lb-waiting-badge::before {
-    content: "";
+  .lb-wheel-label img {
+    display: block;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+    filter: drop-shadow(0 0.15rem 0.3rem rgba(0, 0, 0, 0.18));
+  }
+  .lb-wheel-hub {
     position: absolute;
-    inset: -0.3rem;
+    top: 50%;
+    left: 50%;
+    width: 3.4rem;
+    height: 3.4rem;
+    transform: translate(-50%, -50%);
+    background: #006D68;
+    border: 0.3rem solid #FCF9F1;
     border-radius: 50%;
-    border: 2px solid #006D68;
-    border-top-color: transparent;
-    animation: lb-spin 1s linear infinite;
+    z-index: 2;
+    box-shadow: 0 0.25rem 0.6rem rgba(0, 0, 0, 0.2);
   }
-  .lb-waiting-badge svg { width: 1.6rem; height: 1.6rem; }
-  @keyframes lb-spin {
-    to { transform: rotate(360deg); }
-  }
-  .lb-waiting-view h2 {
-    color: #005151;
-    margin: 0 0 0.5rem;
-    font-size: 1.4rem;
+  .lb-spin-status {
+    min-height: 1.3rem;
+    font-size: 0.9rem;
     font-weight: 600;
-  }
-  .lb-waiting-view p {
-    color: #005151;
-    font-size: 0.92rem;
-    line-height: 1.5;
-    margin: 0;
-    opacity: 0.85;
+    color: #006D68;
+    text-align: center;
+    margin: 0 0 0.5rem;
   }
 
   .lb-footer {
@@ -435,6 +484,7 @@
     .lb-phone-input-wrap input,
     .lb-country-code-select select,
     .lb-toggle-box { min-height: 3.5rem; }
+    .lb-wheel-stage { width: min(48vw, 26rem); }
   }
 
   /* Touch devices (phones, tablets, touch kiosks): guarantee comfortably
@@ -459,6 +509,7 @@
     .lb-event-wrapper { gap: 1rem; padding-top: 1rem; padding-bottom: 1rem; }
     .lb-brand { margin-bottom: 0.75rem; }
     .lb-row { margin-bottom: 0.6rem; }
+    .lb-wheel-stage { width: min(42vh, 15rem); margin-bottom: 0.75rem; }
   }
 
   @media (max-width: 30rem) {
@@ -521,19 +572,24 @@
       <button type="button" id="lbRegisterAnotherBtn" class="lb-btn lb-btn-secondary">Register Another Guest</button>
     </div>
 
-    <!-- Waiting for the booth's big screen to run your spin -->
-    <div id="lbWaitingView" class="lb-waiting-view">
-      <div class="lb-waiting-badge" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3.5" fill="#006D68"/>
-        </svg>
+    <!-- Landing / attract panel — also doubles as the live spin view, so
+         the same wheel element is used for both the idle preview and the
+         actual spin (no duplicate wheel to keep in sync). -->
+    <div id="lbWheelPanel" class="lb-landing">
+      <h1 id="lbWheelHeading">Spin to Win!</h1>
+      <p class="lb-landing-sub" id="lbWheelSub">Sign up in seconds for a chance to win a prize.</p>
+      <div class="lb-wheel-stage">
+        <div class="lb-wheel-pointer" aria-hidden="true"></div>
+        <div class="lb-wheel" id="lbWheel" aria-hidden="true">
+          <div class="lb-wheel-hub"></div>
+        </div>
       </div>
-      <h2>You're in<span id="lbWaitingName"></span>!</h2>
-      <p>Watch the big screen at our booth &mdash; your spin is coming up next.</p>
+      <p id="lbSpinStatus" class="lb-spin-status" aria-live="polite" hidden></p>
+      <button type="button" id="lbStartBtn" class="lb-btn">Sign Up &amp; Spin</button>
     </div>
 
     <!-- Client Form -->
-    <form id="LoveBooKlaviyoSignup" novalidate>
+    <form id="LoveBooKlaviyoSignup" novalidate style="display: none;">
       <div class="lb-row lb-split">
         <div class="lb-field">
           <label for="LbFirst">First Name</label>
@@ -796,76 +852,165 @@
     const successMessage = document.getElementById("lbSuccessMessage");
     const prizeImage = document.getElementById("lbPrizeImage");
     const registerAnotherBtn = document.getElementById("lbRegisterAnotherBtn");
-    const waitingView = document.getElementById("lbWaitingView");
-    const waitingName = document.getElementById("lbWaitingName");
-    const waitingMessage = waitingView.querySelector("p");
-    const WAITING_MESSAGE_DEFAULT = waitingMessage.textContent;
+    const wheelPanel = document.getElementById("lbWheelPanel");
+    const wheelHeading = document.getElementById("lbWheelHeading");
+    const wheelSub = document.getElementById("lbWheelSub");
+    const wheelEl = document.getElementById("lbWheel");
+    const spinStatus = document.getElementById("lbSpinStatus");
+    const startBtn = document.getElementById("lbStartBtn");
 
-    // Insert with the row's id returned, so we can track this specific
-    // registration's spin live. Distinct from sendSupabaseOnce (used by the
-    // background queue), which doesn't need an id back.
-    async function insertRegistrationOnce(row) {
-      if (!sbClient) return null;
-      try {
-        const { data, error } = await sbClient.from("registrations").insert(row).select("id").single();
-        if (error) {
-          console.warn("Supabase insert failed:", error.message);
-          return null;
-        }
-        return data.id;
-      } catch (err) {
-        console.warn("Supabase insert attempt failed:", err);
-        return null;
-      }
-    }
+    // ---- Wheel building --------------------------------------------------
+    // Works identically no matter who's looking at it or how many other
+    // people are doing the same thing on their own device at the same
+    // moment — there's no shared/centralized state to bottleneck on.
+    const TRY_AGAIN = { name: "Try Again", image_url: null };
+    const SEGMENT_COLORS = ["#F8B5C4", "#FBD872", "#D7C6E6", "#C3DC93", "#9FD3CE"];
+    const TRY_AGAIN_COLOR = "#CFC9B8";
 
-    async function insertRegistrationWithRetry(row, attempts) {
-      for (let i = 0; i < attempts; i++) {
-        const id = await insertRegistrationOnce(row);
-        if (id) return id;
-        if (i < attempts - 1) {
-          await new Promise(r => setTimeout(r, 400 * (i + 1)));
-        }
-      }
-      return null;
-    }
+    let wheelSegments = [TRY_AGAIN];
+    let segmentAngle = 360;
+    let currentRotation = 0;
 
-    // Best-effort lookup so the phone's reveal screen can show the same
-    // prize photo the big screen does. Falls back to the checkmark badge
-    // if the prize has since been removed/renamed in admin, or on no prize.
-    async function lookupPrizeImage(prizeName) {
-      if (!sbClient || !prizeName) return null;
+    async function fetchAvailablePrizes() {
+      if (!sbClient) return [];
       try {
         const { data, error } = await sbClient
           .from("prizes")
-          .select("image_url")
-          .eq("name", prizeName)
-          .limit(1)
-          .maybeSingle();
-        if (error || !data) return null;
-        return data.image_url || null;
+          .select("id, name, image_url, quantity, given_count")
+          .eq("active", true)
+          .order("sort_order", { ascending: true })
+          .limit(5);
+        if (error) throw error;
+        // Hide anything that's already out of stock so the wheel never
+        // offers a prize there's none left of.
+        return (data || []).filter(function(p) {
+          return p.quantity == null || p.given_count < p.quantity;
+        });
       } catch (err) {
-        return null;
+        console.warn("Could not load prizes:", err);
+        return [];
       }
     }
 
-    let activeWatch = null;
+    function setWheelSegments(prizes) {
+      const gifts = prizes.length ? prizes : [{ name: "Mystery Gift", image_url: null }];
+      wheelSegments = gifts.concat([TRY_AGAIN]);
+      segmentAngle = 360 / wheelSegments.length;
 
-    function stopWatching() {
-      if (!activeWatch) return;
-      clearTimeout(activeWatch.timeoutTimer);
-      clearInterval(activeWatch.pollTimer);
-      if (activeWatch.channel && sbClient) {
-        sbClient.removeChannel(activeWatch.channel);
-      }
-      activeWatch = null;
+      const stops = wheelSegments.map(function(seg, i) {
+        const color = seg === TRY_AGAIN ? TRY_AGAIN_COLOR : SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+        return color + " " + (i * segmentAngle) + "deg " + ((i + 1) * segmentAngle) + "deg";
+      });
+      wheelEl.style.background = "conic-gradient(" + stops.join(", ") + ")";
     }
 
-    function showForm() {
-      stopWatching();
-      form.reset();
+    // Each label's on-screen CENTER is placed with plain trigonometry
+    // (computed left/top, self-centered via translate(-50%,-50%)), rather
+    // than a rotate()+translate() transform chain. That combination was
+    // what caused prize images to drift toward the seam between two
+    // wedges instead of sitting in the middle of their own — the box's
+    // own corner, not its center, was what the old transform anchored.
+    function layoutWheelLabels() {
+      wheelEl.querySelectorAll(".lb-wheel-label").forEach(function(el) { el.remove(); });
+
+      const size = wheelEl.getBoundingClientRect().width;
+      const radius = size / 2;
+      const labelRadius = radius * 0.6;
+      const angleRad = (segmentAngle * Math.PI) / 180;
+      // Chord length at labelRadius for one wedge — how much horizontal
+      // room a label actually has before it'd overlap its neighbor.
+      const chord = 2 * labelRadius * Math.sin(angleRad / 2);
+      const imgSize = Math.max(size * 0.11, Math.min(chord * 0.82, radius * 0.55));
+
+      wheelSegments.forEach(function(seg, i) {
+        const midAngleDeg = i * segmentAngle + segmentAngle / 2;
+        const midAngleRad = (midAngleDeg * Math.PI) / 180;
+        // 0deg = 12 o'clock, positive = clockwise — matches the
+        // conic-gradient's own angle convention exactly.
+        const x = radius + labelRadius * Math.sin(midAngleRad);
+        const y = radius - labelRadius * Math.cos(midAngleRad);
+
+        const el = document.createElement("div");
+        el.className = "lb-wheel-label";
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.width = Math.max(chord * 0.98, imgSize) + "px";
+        el.style.fontSize = Math.max(11, imgSize * 0.15) + "px";
+
+        if (seg.image_url) {
+          const img = document.createElement("img");
+          img.src = seg.image_url;
+          img.alt = "";
+          img.style.width = imgSize + "px";
+          img.style.height = imgSize + "px";
+          img.onerror = function() { img.remove(); };
+          el.appendChild(img);
+        }
+        const text = document.createElement("span");
+        text.textContent = seg.name;
+        el.appendChild(text);
+        wheelEl.appendChild(el);
+      });
+    }
+
+    let labelResizeTimer = null;
+    window.addEventListener("resize", function() {
+      clearTimeout(labelResizeTimer);
+      labelResizeTimer = setTimeout(layoutWheelLabels, 150);
+    });
+
+    function resetWheelRotation() {
+      currentRotation = 0;
+      wheelEl.style.transition = "none";
+      wheelEl.style.transform = "rotate(0deg)";
+    }
+
+    function spinToIndex(targetIndex) {
+      return new Promise(function(resolve) {
+        const midAngle = targetIndex * segmentAngle + segmentAngle / 2;
+        const jitter = (Math.random() - 0.5) * (segmentAngle * 0.6);
+        const targetMod = ((360 - (midAngle + jitter)) % 360 + 360) % 360;
+        const fullSpins = 5 + Math.floor(Math.random() * 3);
+        const currentMod = ((currentRotation % 360) + 360) % 360;
+        const forwardDelta = ((targetMod - currentMod) + 360) % 360;
+        const finalRotation = currentRotation + fullSpins * 360 + forwardDelta;
+
+        wheelEl.style.transition = "none";
+        anime({
+          targets: wheelEl,
+          rotate: finalRotation,
+          duration: 4200,
+          easing: "cubicBezier(.17, .67, .16, .99)",
+          complete: function() {
+            currentRotation = finalRotation;
+            resolve();
+          }
+        });
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(function(resolve) { setTimeout(resolve, ms); });
+    }
+
+    // ---- View management ---------------------------------------------
+    function showLanding() {
+      form.style.display = "none";
       successView.style.display = "none";
-      waitingView.style.display = "none";
+      wheelPanel.style.display = "block";
+      wheelHeading.textContent = "Spin to Win!";
+      wheelSub.hidden = false;
+      wheelSub.style.display = "block";
+      spinStatus.hidden = true;
+      startBtn.hidden = false;
+      startBtn.disabled = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showFormView() {
+      wheelPanel.style.display = "none";
+      successView.style.display = "none";
+      form.reset();
       form.style.display = "block";
       submitBtn.disabled = false;
       submitBtn.textContent = "Sign Up";
@@ -874,18 +1019,22 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function showWaiting(firstName) {
+    function showSpinning() {
       form.style.display = "none";
-      waitingName.textContent = firstName ? ", " + firstName : "";
-      waitingMessage.textContent = WAITING_MESSAGE_DEFAULT;
-      waitingView.style.display = "block";
+      successView.style.display = "none";
+      wheelPanel.style.display = "block";
+      wheelHeading.textContent = "Spinning...";
+      wheelSub.hidden = true;
+      wheelSub.style.display = "none";
+      startBtn.hidden = true;
+      spinStatus.hidden = false;
+      spinStatus.textContent = "Good luck!";
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    async function revealResult(prize) {
-      waitingView.style.display = "none";
+    function revealResult(prize, imageUrl) {
+      wheelPanel.style.display = "none";
 
-      const imageUrl = await lookupPrizeImage(prize);
       if (imageUrl) {
         prizeImage.src = imageUrl;
         prizeImage.classList.add("visible");
@@ -906,65 +1055,24 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Fires once the booth's big screen (wheel.html) completes this guest's
-    // spin. Syncs the final prize to Klaviyo (this phone still has the full
-    // profile in memory, so it can do this without needing wheel.html to
-    // ever see any contact info) and reveals the personal result screen.
-    async function watchForSpinResult(id, klaviyoPayload) {
-      stopWatching();
-      let handled = false;
-
-      async function handleRow(row) {
-        if (handled || !row || row.spin_status !== "completed") return;
-        handled = true;
-        stopWatching();
-
-        const prize = row.prize || null;
-        klaviyoPayload.data.attributes.profile.data.attributes.properties.prize = prize || "None";
-        const confirmed = await sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS);
-        if (!confirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
-
-        revealResult(prize);
-      }
-
-      const channel = sbClient
-        .channel("spin-result-" + id)
-        .on("postgres_changes", {
-          event: "UPDATE",
-          schema: "public",
-          table: "registrations",
-          filter: "id=eq." + id
-        }, function(payload) {
-          handleRow(payload.new);
-        })
-        .subscribe();
-
-      // Realtime is the primary path; this poll is just a safety net in
-      // case an event is ever missed (matches the reliability approach
-      // used everywhere else in this app).
-      const pollTimer = setInterval(async function() {
-        if (handled || !sbClient) return;
-        const { data, error } = await sbClient
-          .from("registrations")
-          .select("spin_status, prize")
-          .eq("id", id)
-          .maybeSingle();
-        if (!error) handleRow(data);
-      }, 5000);
-
-      // If the big screen is offline or backed up for a long time, stop
-      // leaving the guest staring at a silent spinner forever.
-      const timeoutTimer = setTimeout(function() {
-        if (handled) return;
-        waitingMessage.textContent = "Still spinning! If this takes much longer, just check with our team.";
-      }, 180000);
-
-      activeWatch = { channel, pollTimer, timeoutTimer };
+    if (startBtn) {
+      startBtn.addEventListener("click", showFormView);
     }
 
     if (registerAnotherBtn) {
-      registerAnotherBtn.addEventListener("click", showForm);
+      registerAnotherBtn.addEventListener("click", showLanding);
     }
+
+    showLanding();
+
+    // Load the wheel for the idle preview right away so it's not blank —
+    // re-fetched fresh again right before the actual spin so stock/prize
+    // changes made in admin mid-event show up immediately either way.
+    (async function primeWheel() {
+      const prizes = await fetchAvailablePrizes();
+      setWheelSegments(prizes);
+      layoutWheelLabels();
+    })();
 
     if (form) {
       form.addEventListener("submit", async function(e) {
@@ -1005,10 +1113,65 @@
 
         const utmParams = getUrlParams();
 
+        showSpinning();
+        resetWheelRotation();
+
+        const prizes = await fetchAvailablePrizes();
+        setWheelSegments(prizes);
+        layoutWheelLabels();
+        await sleep(300);
+
+        let spinCount = 0;
+        let finalPrize = null;
+        let finalPrizeImage = null;
+        while (true) {
+          spinCount++;
+          const targetIndex = Math.floor(Math.random() * wheelSegments.length);
+          await spinToIndex(targetIndex);
+          const seg = wheelSegments[targetIndex];
+
+          if (seg === TRY_AGAIN && spinCount < 2) {
+            spinStatus.textContent = "So close! One more spin...";
+            await sleep(1200);
+            continue;
+          }
+
+          if (seg === TRY_AGAIN || !seg.id) {
+            // Landed on Try Again, or the unlimited "Mystery Gift" placeholder
+            // used when nothing's configured in admin yet.
+            finalPrize = seg === TRY_AGAIN ? null : seg.name;
+            finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
+          } else {
+            // Atomically claim a real, tracked prize. If someone else just
+            // took the last unit at the same moment, this comes back false
+            // and we gracefully fall back to a no-prize outcome rather than
+            // promising something that's no longer available.
+            let claimed = false;
+            try {
+              const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
+              claimed = !error && data === true;
+            } catch (err) {
+              claimed = false;
+            }
+            if (claimed) {
+              finalPrize = seg.name;
+              finalPrizeImage = seg.image_url;
+            } else {
+              finalPrize = null;
+              finalPrizeImage = null;
+            }
+          }
+          break;
+        }
+
+        spinStatus.textContent = finalPrize ? "Landed on " + finalPrize + "!" : "No prize this time.";
+        await sleep(2200);
+
         const customProperties = {
           is_parent: isParent,
           event: "Dubai Baby Expo 2026",
           source: utmParams.utm_source || "baby_expo_2026",
+          prize: finalPrize || "None",
           ...utmParams
         };
 
@@ -1056,6 +1219,7 @@
           phone: fullPhone || null,
           is_parent: isParent,
           source: utmParams.utm_source || "baby_expo_2026",
+          prize: finalPrize,
           utm_source: utmParams.utm_source || null,
           utm_medium: utmParams.utm_medium || null,
           utm_campaign: utmParams.utm_campaign || null,
@@ -1063,28 +1227,21 @@
           utm_content: utmParams.utm_content || null
         };
 
-        const id = await insertRegistrationWithRetry(supabaseRow, MAX_SEND_ATTEMPTS);
-
-        // Klaviyo signup happens now regardless (without a prize yet — that
-        // gets synced separately once the spin resolves, in watchForSpinResult).
-        const klaviyoConfirmed = await sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS);
-        if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
+        if (!navigator.onLine) {
+          enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
+          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
+        } else {
+          const [klaviyoConfirmed, supabaseConfirmed] = await Promise.all([
+            sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS),
+            sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS)
+          ]);
+          if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
+          if (!supabaseConfirmed) enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
+        }
 
         submitBtn.disabled = false;
         submitBtn.textContent = "Sign Up";
-
-        if (id) {
-          showWaiting(firstName);
-          watchForSpinResult(id, klaviyoPayload);
-        } else {
-          // Couldn't confirm the Supabase write even after retries — it's
-          // queued locally and will sync automatically once possible, but
-          // we have no row id to track live, so we can't watch for a spin
-          // result in this session. Still don't lose the guest's details.
-          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
-          showWaiting(firstName);
-          waitingMessage.textContent = "If you don't see your spin on the big screen shortly, please check with our team.";
-        }
+        revealResult(finalPrize, finalPrizeImage);
       });
     }
 
