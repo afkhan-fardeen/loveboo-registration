@@ -306,15 +306,6 @@
     outline: 2px solid #005151;
     outline-offset: 2px;
   }
-  .lb-btn-secondary {
-    background: transparent;
-    color: #006D68;
-    border: 1.5px solid #006D68;
-    margin-top: 1.5rem;
-  }
-  .lb-btn-secondary:hover {
-    background: rgba(0, 109, 104, 0.08);
-  }
 
   /* Instant Success Screen */
   .lb-success {
@@ -569,7 +560,6 @@
       <img id="lbPrizeImage" class="lb-prize-image" alt="">
       <h2 id="lbSuccessTitle">Thank you!</h2>
       <p id="lbSuccessMessage">You're registered. Show this screen at our booth to collect your gift bag.</p>
-      <button type="button" id="lbRegisterAnotherBtn" class="lb-btn lb-btn-secondary">Register Another Guest</button>
     </div>
 
     <!-- Landing / attract panel — also doubles as the live spin view, so
@@ -851,7 +841,6 @@
     const successTitle = document.getElementById("lbSuccessTitle");
     const successMessage = document.getElementById("lbSuccessMessage");
     const prizeImage = document.getElementById("lbPrizeImage");
-    const registerAnotherBtn = document.getElementById("lbRegisterAnotherBtn");
     const wheelPanel = document.getElementById("lbWheelPanel");
     const wheelHeading = document.getElementById("lbWheelHeading");
     const wheelSub = document.getElementById("lbWheelSub");
@@ -1057,10 +1046,6 @@
 
     if (startBtn) {
       startBtn.addEventListener("click", showFormView);
-    }
-
-    if (registerAnotherBtn) {
-      registerAnotherBtn.addEventListener("click", showLanding);
     }
 
     showLanding();
