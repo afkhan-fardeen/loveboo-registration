@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="loveboo">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -11,751 +11,398 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
+
 <style>
-  *, *::before, *::after { box-sizing: border-box; }
-
-  html { font-size: clamp(15px, 0.4vw + 13px, 18px); }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    background-color: #FCF9F1;
-    width: 100%;
+  /* Love Boo theme for daisyUI: every component below picks these up. */
+  [data-theme="loveboo"] {
+    color-scheme: light;
+    --color-base-100: #FFFFFF;
+    --color-base-200: #FCF9F1;
+    --color-base-300: #E3EABA;
+    --color-base-content: #005151;
+    --color-primary: #006D68;
+    --color-primary-content: #FCF9F1;
+    --color-secondary: #C3DC93;
+    --color-secondary-content: #005151;
+    --color-accent: #F8B5C4;
+    --color-accent-content: #005151;
+    --color-neutral: #005151;
+    --color-neutral-content: #FCF9F1;
+    --color-info: #9FD3CE;
+    --color-info-content: #005151;
+    --color-success: #C3DC93;
+    --color-success-content: #005151;
+    --color-warning: #FBD872;
+    --color-warning-content: #005151;
+    --color-error: #A5321F;
+    --color-error-content: #FFFFFF;
+    --radius-selector: 999px;
+    --radius-field: 0.75rem;
+    --radius-box: 1rem;
+    --border: 1.5px;
   }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: #005151;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-
-  /* ---- Login screen ---- */
-  .lb-login-wrap {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-  }
-  .lb-login-card {
-    width: 100%;
-    max-width: 22rem;
-    background: #fff;
-    border: 1.5px solid #C3DC93;
-    border-radius: 1.25rem;
-    padding: 2rem 1.75rem;
-  }
-  .lb-login-card img { display: block; max-width: 7.5rem; margin: 0 auto 1.25rem; }
-  .lb-login-card h1 {
-    font-size: 1.05rem;
-    text-align: center;
-    margin: 0 0 1.5rem;
-    color: #005151;
-  }
-  .lb-field { margin-bottom: 0.9rem; }
-  .lb-field label {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 600;
-    margin-bottom: 0.4rem;
-  }
-  .lb-field input {
-    width: 100%;
-    font-size: max(16px, 0.95rem);
-    color: #005151;
-    background: #FCF9F1;
-    border: 1.5px solid #C3DC93;
-    border-radius: 0.75rem;
-    padding: 0.75rem 0.85rem;
-    box-sizing: border-box;
-  }
-  .lb-field input:focus {
-    outline: none;
-    border-color: #006D68;
-    box-shadow: 0 0 0 3px rgba(0, 109, 104, 0.12);
-  }
-  .lb-btn {
-    width: 100%;
-    background: #006D68;
-    color: #FCF9F1;
-    border: none;
-    padding: 0.85rem;
-    border-radius: 0.85rem;
-    font-size: 0.98rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 0.4rem;
-  }
-  .lb-btn:hover { background: #005151; }
-  .lb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-  .lb-login-error {
-    background: #FDEDEA;
-    border: 1.5px solid #E8998D;
-    color: #A5321F;
-    border-radius: 0.65rem;
-    padding: 0.6rem 0.75rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    margin-bottom: 0.9rem;
-  }
-  .lb-login-error[hidden] { display: none; }
-
-  /* ---- Dashboard ---- */
-  .lb-dash { display: none; padding: 1.25rem clamp(1rem, 3vw, 2.5rem) 3rem; max-width: 90rem; margin: 0 auto; }
-  .lb-dash-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    justify-content: space-between;
-    margin-bottom: 1.25rem;
-  }
-  .lb-dash-title { display: flex; align-items: center; gap: 0.6rem; }
-  .lb-dash-title img { width: 2rem; height: auto; }
-  .lb-dash-title h1 { font-size: 1.1rem; margin: 0; }
-  .lb-dash-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-  .lb-btn-sm {
-    background: #006D68;
-    color: #FCF9F1;
-    border: none;
-    padding: 0.55rem 0.9rem;
-    border-radius: 0.6rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .lb-btn-sm:hover { background: #005151; }
-  .lb-btn-sm.lb-btn-outline {
-    background: transparent;
-    color: #006D68;
-    border: 1.5px solid #006D68;
-  }
-  .lb-btn-sm.lb-btn-outline:hover { background: rgba(0, 109, 104, 0.08); }
-  .lb-btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  .lb-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  .lb-search {
-    flex: 1;
-    min-width: 12rem;
-    font-size: max(16px, 0.9rem);
-    padding: 0.6rem 0.85rem;
-    border: 1.5px solid #C3DC93;
-    border-radius: 0.65rem;
-    background: #fff;
-    color: #005151;
-  }
-  .lb-search:focus { outline: none; border-color: #006D68; }
-  .lb-count { font-size: 0.8rem; color: #005151; opacity: 0.75; white-space: nowrap; }
-
-  .lb-table-wrap {
-    background: #fff;
-    border: 1.5px solid #C3DC93;
-    border-radius: 1rem;
-    overflow: auto;
-    max-height: 65vh;
-  }
-  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  thead th {
-    position: sticky;
-    top: 0;
-    background: #E3EABA;
-    color: #005151;
-    text-align: left;
-    padding: 0.7rem 0.9rem;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  tbody td {
-    padding: 0.65rem 0.9rem;
-    border-top: 1px solid #EFEADB;
-    vertical-align: top;
-  }
-  tbody tr:hover { background: #FCF9F1; }
-  .lb-empty-state, .lb-loading-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #005151;
-    opacity: 0.7;
-    font-size: 0.9rem;
-  }
-  .lb-badge {
-    display: inline-block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.15rem 0.55rem;
-    border-radius: 999px;
-    background: #E3EABA;
-    color: #005151;
-  }
-
-  /* ---- Tabs ---- */
-  .lb-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
-  .lb-tab {
-    background: transparent;
-    border: 1.5px solid #C3DC93;
-    color: #005151;
-    padding: 0.5rem 1rem;
-    border-radius: 0.6rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .lb-tab.active { background: #006D68; border-color: #006D68; color: #FCF9F1; }
-  .lb-panel { display: none; }
-  .lb-panel.active { display: block; }
-
-  /* ---- Prizes ---- */
-  .lb-prize-form {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 0.75rem;
-    background: #fff;
-    border: 1.5px solid #C3DC93;
-    border-radius: 1rem;
-    padding: 1rem;
-    margin-bottom: 1.25rem;
-  }
-  .lb-prize-form .lb-field { margin-bottom: 0; flex: 1; min-width: 10rem; }
-  .lb-prize-form input[type="text"],
-  .lb-prize-form input[type="file"] {
-    width: 100%;
-    font-size: max(16px, 0.9rem);
-    color: #005151;
-    background: #FCF9F1;
-    border: 1.5px solid #C3DC93;
-    border-radius: 0.65rem;
-    padding: 0.6rem 0.75rem;
-    box-sizing: border-box;
-  }
-  .lb-prize-form .lb-btn-sm { flex-shrink: 0; padding: 0.68rem 1.1rem; }
-
-  .lb-prize-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
-    gap: 1rem;
-  }
-  .lb-prize-card {
-    background: #fff;
-    border: 1.5px solid #C3DC93;
-    border-radius: 1rem;
-    padding: 0.9rem;
-    text-align: center;
-  }
-  .lb-prize-card .lb-prize-thumb {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    border-radius: 0.75rem;
-    background: #FCF9F1 center/cover no-repeat;
-    margin-bottom: 0.6rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #005151;
-    opacity: 0.5;
-    font-size: 0.7rem;
-    overflow: hidden;
-  }
-  .lb-prize-card .lb-prize-thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .lb-prize-card .lb-prize-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #005151;
-    margin: 0 0 0.3rem;
-    word-break: break-word;
-  }
-  .lb-prize-card .lb-prize-stock {
-    font-size: 0.72rem;
-    color: #006D68;
-    opacity: 0.85;
-    margin: 0 0 0.7rem;
-  }
-  .lb-prize-card .lb-prize-stock.lb-prize-stock-out {
-    color: #A5321F;
-    opacity: 1;
-    font-weight: 600;
-  }
-  .lb-prize-card .lb-btn-sm {
-    width: 100%;
-    background: transparent;
-    color: #A5321F;
-    border: 1.5px solid #A5321F;
-  }
-  .lb-prize-card .lb-btn-sm:hover { background: rgba(165, 50, 31, 0.08); }
-
-  @media (max-width: 40rem) {
-    thead { display: none; }
-    table, tbody, tr, td { display: block; width: 100%; }
-    tbody tr {
-      border-top: 1px solid #EFEADB;
-      padding: 0.75rem 0.9rem;
-    }
-    tbody td {
-      border-top: none;
-      padding: 0.2rem 0;
-    }
-    tbody td::before {
-      content: attr(data-label);
-      display: block;
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      opacity: 0.6;
-      margin-bottom: 0.1rem;
-    }
-  }
+  body { font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #FCF9F1; }
+  [x-cloak] { display: none !important; }
+  /* Keep inputs >=16px so iOS doesn't zoom on focus */
+  .input, .select, .file-input { font-size: max(16px, 0.95rem); }
 </style>
 </head>
-<body>
+<body class="min-h-dvh text-base-content"
+      x-data="adminApp()" x-init="init()" x-cloak>
 
-<div class="lb-login-wrap" id="lbLoginWrap">
-  <div class="lb-login-card">
-    <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250" alt="Love Boo">
-    <h1>Registrations Admin</h1>
-    <p id="lbLoginError" class="lb-login-error" role="alert" hidden></p>
-    <form id="lbLoginForm" novalidate>
-      <div class="lb-field">
-        <label for="lbAdminEmail">Email</label>
-        <input type="email" id="lbAdminEmail" required autocomplete="username">
-      </div>
-      <div class="lb-field">
-        <label for="lbAdminPassword">Password</label>
-        <input type="password" id="lbAdminPassword" required autocomplete="current-password">
-      </div>
-      <button type="submit" id="lbLoginBtn" class="lb-btn">Log In</button>
+<!-- ============ Login ============ -->
+<main x-show="view === 'login'" class="min-h-dvh flex items-center justify-center p-6">
+  <div class="card bg-base-100 border border-secondary w-full max-w-sm">
+    <form class="card-body gap-3" @submit.prevent="login()">
+      <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250" alt="Love Boo" class="w-30 mx-auto mb-1">
+      <h1 class="text-center font-extrabold text-lg mb-2">Registrations Admin</h1>
+
+      <div role="alert" class="alert alert-error alert-soft text-sm" x-show="loginError" x-text="loginError"></div>
+
+      <label class="floating-label">
+        <span>Email</span>
+        <input type="email" required autocomplete="username" placeholder="Email"
+               class="input input-bordered w-full bg-base-200" x-model="email">
+      </label>
+      <label class="floating-label">
+        <span>Password</span>
+        <input type="password" required autocomplete="current-password" placeholder="Password"
+               class="input input-bordered w-full bg-base-200" x-model="password">
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-block mt-2" :disabled="loggingIn">
+        <span class="loading loading-spinner loading-sm" x-show="loggingIn"></span>
+        <span x-text="loggingIn ? 'Logging in...' : 'Log In'"></span>
+      </button>
     </form>
   </div>
-</div>
+</main>
 
-<div class="lb-dash" id="lbDash">
-  <div class="lb-dash-header">
-    <div class="lb-dash-title">
-      <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=64" alt="Love Boo">
-      <h1>Baby Expo 2026 Registrations</h1>
+<!-- ============ Dashboard ============ -->
+<div x-show="view === 'dash'" class="max-w-[90rem] mx-auto px-4 sm:px-8 pt-5 pb-12">
+
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div class="flex items-center gap-3">
+      <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=64" alt="Love Boo" class="w-8">
+      <h1 class="text-lg font-extrabold">Baby Expo 2026 Registrations</h1>
     </div>
-    <div class="lb-dash-actions">
-      <button type="button" id="lbRefreshBtn" class="lb-btn-sm lb-btn-outline">Refresh</button>
-      <button type="button" id="lbExportBtn" class="lb-btn-sm lb-btn-outline">Export CSV</button>
-      <button type="button" id="lbSignOutBtn" class="lb-btn-sm">Sign Out</button>
+    <div class="flex gap-2">
+      <button type="button" class="btn btn-outline btn-primary btn-sm" @click="loadRegistrations()">Refresh</button>
+      <button type="button" class="btn btn-outline btn-primary btn-sm" @click="downloadCsv()">Export CSV</button>
+      <button type="button" class="btn btn-primary btn-sm" @click="signOut()">Sign Out</button>
     </div>
+  </header>
+
+  <!-- Stats -->
+  <section class="stats stats-vertical sm:stats-horizontal bg-base-100 border border-secondary w-full mb-5">
+    <div class="stat">
+      <div class="stat-title">Registrations</div>
+      <div class="stat-value text-primary" x-text="rows.length"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Prizes won</div>
+      <div class="stat-value text-primary" x-text="rows.filter(r => r.prize).length"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Parents</div>
+      <div class="stat-value text-primary" x-text="rows.filter(r => (r.is_parent || '').toLowerCase() === 'yes').length"></div>
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <div role="tablist" class="tabs tabs-box bg-base-300/50 mb-4 w-fit">
+    <button role="tab" type="button" class="tab" :class="tab === 'registrations' && 'tab-active'" @click="tab = 'registrations'">Registrations</button>
+    <button role="tab" type="button" class="tab" :class="tab === 'prizes' && 'tab-active'" @click="openPrizes()">Wheel Prizes</button>
   </div>
 
-  <div class="lb-tabs">
-    <button type="button" class="lb-tab active" id="lbTabRegistrations">Registrations</button>
-    <button type="button" class="lb-tab" id="lbTabPrizes">Wheel Prizes</button>
-  </div>
-
-  <div class="lb-panel active" id="lbPanelRegistrations">
-    <div class="lb-toolbar">
-      <input type="text" id="lbSearch" class="lb-search" placeholder="Search by name or email...">
-      <span class="lb-count" id="lbCount"></span>
+  <!-- Registrations -->
+  <section x-show="tab === 'registrations'">
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+      <label class="input input-bordered flex-1 min-w-48 bg-base-100">
+        <svg class="h-4 w-4 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" class="grow" placeholder="Search by name or email..." x-model="search">
+      </label>
+      <span class="text-sm opacity-75 whitespace-nowrap" x-text="filtered.length + (filtered.length === 1 ? ' registration' : ' registrations')"></span>
     </div>
 
-    <div class="lb-table-wrap">
-      <table>
+    <div class="card bg-base-100 border border-secondary overflow-auto max-h-[65vh]">
+      <table class="table table-pin-rows table-zebra">
         <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Parent?</th>
-            <th>Source</th>
-            <th>Prize</th>
-            <th>Registered</th>
+          <tr class="bg-base-300">
+            <th>Name</th><th>Email</th><th>Phone</th><th>Parent?</th><th>Source</th><th>Prize</th><th>Registered</th>
           </tr>
         </thead>
-        <tbody id="lbTableBody"></tbody>
+        <tbody>
+          <template x-for="r in filtered" :key="r.id">
+            <tr class="hover:bg-base-200">
+              <td class="font-semibold whitespace-nowrap" x-text="[r.first_name, r.last_name].filter(Boolean).join(' ')"></td>
+              <td x-text="r.email"></td>
+              <td class="whitespace-nowrap" x-text="r.phone || '—'"></td>
+              <td><span class="badge badge-secondary badge-sm" x-text="r.is_parent || '—'"></span></td>
+              <td x-text="r.source || '—'"></td>
+              <td>
+                <span class="badge badge-accent badge-sm" x-show="r.prize" x-text="r.prize"></span>
+                <span x-show="!r.prize">—</span>
+              </td>
+              <td class="whitespace-nowrap" x-text="formatDate(r.created_at)"></td>
+            </tr>
+          </template>
+        </tbody>
       </table>
-      <div id="lbEmptyState" class="lb-empty-state" hidden>No registrations yet.</div>
-      <div id="lbLoadingState" class="lb-loading-state">Loading...</div>
+      <div class="text-center py-12 opacity-70" x-show="loading"><span class="loading loading-dots loading-md"></span></div>
+      <div class="text-center py-12 opacity-70" x-show="!loading && !filtered.length" x-text="loadError || 'No registrations yet.'"></div>
+    </div>
+  </section>
+
+  <!-- Prizes -->
+  <section x-show="tab === 'prizes'">
+    <form class="card bg-base-100 border border-secondary mb-5" @submit.prevent="addPrize($refs.prizeForm)" x-ref="prizeForm">
+      <div class="card-body sm:flex-row flex-col items-stretch sm:items-end gap-3 p-4">
+        <label class="form-control flex-1 min-w-40">
+          <span class="label-text text-xs font-bold mb-1">Prize name</span>
+          <input type="text" required placeholder="e.g. Baby Carrier" class="input input-bordered w-full bg-base-200" x-model="prizeName">
+        </label>
+        <label class="form-control flex-1 min-w-40">
+          <span class="label-text text-xs font-bold mb-1">Prize image</span>
+          <input type="file" accept="image/*" required class="file-input file-input-bordered w-full bg-base-200" @change="prizeFile = $event.target.files[0]">
+        </label>
+        <label class="form-control sm:w-32">
+          <span class="label-text text-xs font-bold mb-1">Quantity</span>
+          <input type="number" min="1" step="1" placeholder="Unlimited" class="input input-bordered w-full bg-base-200" x-model="prizeQty">
+        </label>
+        <button type="submit" class="btn btn-primary" :disabled="addingPrize">
+          <span class="loading loading-spinner loading-sm" x-show="addingPrize"></span>
+          <span x-text="addingPrize ? 'Adding...' : 'Add Prize'"></span>
+        </button>
+      </div>
+    </form>
+
+    <div role="alert" class="alert alert-error alert-soft mb-4 text-sm" x-show="prizeError" x-text="prizeError"></div>
+
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-4">
+      <template x-for="p in prizes" :key="p.id">
+        <div class="card bg-base-100 border border-secondary text-center">
+          <figure class="px-3 pt-3">
+            <div class="aspect-square w-full rounded-xl bg-base-200 overflow-hidden flex items-center justify-center text-xs opacity-60">
+              <img x-show="p.image_url" :src="p.image_url" alt="" class="w-full h-full object-cover">
+              <span x-show="!p.image_url">No image</span>
+            </div>
+          </figure>
+          <div class="card-body p-3 gap-1 items-center">
+            <p class="font-bold text-sm break-words" x-text="p.name"></p>
+            <span class="badge badge-sm" :class="soldOut(p) ? 'badge-error' : 'badge-secondary'" x-text="stockLabel(p)"></span>
+            <button type="button" class="btn btn-outline btn-error btn-sm btn-block mt-2" @click="confirmRemove(p)">Remove</button>
+          </div>
+        </div>
+      </template>
+    </div>
+    <div class="text-center py-12 opacity-70" x-show="prizesLoading"><span class="loading loading-dots loading-md"></span></div>
+    <div class="text-center py-12 opacity-70" x-show="!prizesLoading && !prizes.length"
+         x-text="prizesLoadError || 'No prizes added yet — the wheel will use a placeholder until you add some.'"></div>
+  </section>
+</div>
+
+<!-- Remove-prize confirmation -->
+<dialog class="modal" x-ref="removeDialog">
+  <div class="modal-box">
+    <h3 class="font-extrabold text-lg">Remove prize?</h3>
+    <p class="py-3">
+      <strong x-text="toRemove && toRemove.name"></strong> will be taken off the wheel.
+    </p>
+    <div class="modal-action">
+      <form method="dialog"><button class="btn btn-ghost">Cancel</button></form>
+      <button type="button" class="btn btn-error" @click="removePrize()">Remove</button>
     </div>
   </div>
-
-  <div class="lb-panel" id="lbPanelPrizes">
-    <form id="lbPrizeForm" class="lb-prize-form" novalidate>
-      <div class="lb-field">
-        <label for="lbPrizeName">Prize name</label>
-        <input type="text" id="lbPrizeName" placeholder="e.g. Baby Carrier" required>
-      </div>
-      <div class="lb-field">
-        <label for="lbPrizeImage">Prize image</label>
-        <input type="file" id="lbPrizeImage" accept="image/*" required>
-      </div>
-      <div class="lb-field" style="flex: 0 0 8rem;">
-        <label for="lbPrizeQuantity">Quantity</label>
-        <input type="number" id="lbPrizeQuantity" placeholder="Unlimited" min="1" step="1">
-      </div>
-      <button type="submit" id="lbPrizeAddBtn" class="lb-btn-sm">Add Prize</button>
-    </form>
-    <p id="lbPrizeError" class="lb-login-error" role="alert" hidden></p>
-    <div class="lb-prize-grid" id="lbPrizeGrid"></div>
-    <div id="lbPrizeEmptyState" class="lb-empty-state" hidden>No prizes added yet — the wheel will use a placeholder until you add some.</div>
-    <div id="lbPrizeLoadingState" class="lb-loading-state">Loading...</div>
-  </div>
-</div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <script>
   const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const loginWrap = document.getElementById("lbLoginWrap");
-  const dash = document.getElementById("lbDash");
-  const loginForm = document.getElementById("lbLoginForm");
-  const loginBtn = document.getElementById("lbLoginBtn");
-  const loginError = document.getElementById("lbLoginError");
-  const tableBody = document.getElementById("lbTableBody");
-  const emptyState = document.getElementById("lbEmptyState");
-  const loadingState = document.getElementById("lbLoadingState");
-  const searchInput = document.getElementById("lbSearch");
-  const countEl = document.getElementById("lbCount");
-
-  let allRows = [];
-
-  function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str == null ? "" : String(str);
-    return div.innerHTML;
+  function matches(r, q) {
+    if (!q) return true;
+    return [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase().includes(q);
   }
 
-  function formatDate(iso) {
-    try {
-      return new Date(iso).toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short"
-      });
-    } catch (e) {
-      return iso || "";
-    }
-  }
+  function adminApp() {
+    return {
+      view: "login", tab: "registrations",
+      email: "", password: "", loginError: "", loggingIn: false,
+      rows: [], search: "", loading: false, loadError: "",
+      prizes: [], prizesLoading: false, prizesLoaded: false, prizesLoadError: "",
+      prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
+      toRemove: null,
 
-  function renderRows(rows) {
-    if (!rows.length) {
-      tableBody.innerHTML = "";
-      emptyState.hidden = false;
-      return;
-    }
-    emptyState.hidden = true;
-    tableBody.innerHTML = rows.map(function(r) {
-      const name = [r.first_name, r.last_name].filter(Boolean).join(" ");
-      return (
-        "<tr>" +
-        '<td data-label="Name">' + escapeHtml(name) + "</td>" +
-        '<td data-label="Email">' + escapeHtml(r.email) + "</td>" +
-        '<td data-label="Phone">' + escapeHtml(r.phone || "—") + "</td>" +
-        '<td data-label="Parent?"><span class="lb-badge">' + escapeHtml(r.is_parent || "—") + "</span></td>" +
-        '<td data-label="Source">' + escapeHtml(r.source || "—") + "</td>" +
-        '<td data-label="Prize">' + escapeHtml(r.prize || "—") + "</td>" +
-        '<td data-label="Registered">' + escapeHtml(formatDate(r.created_at)) + "</td>" +
-        "</tr>"
-      );
-    }).join("");
-  }
+      get filtered() {
+        const q = this.search.trim().toLowerCase();
+        return this.rows.filter(r => matches(r, q));
+      },
 
-  function applyFilter() {
-    const q = searchInput.value.trim().toLowerCase();
-    const filtered = !q ? allRows : allRows.filter(function(r) {
-      const haystack = [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase();
-      return haystack.includes(q);
-    });
-    countEl.textContent = filtered.length + (filtered.length === 1 ? " registration" : " registrations");
-    renderRows(filtered);
-  }
+      async init() {
+        this.subscribeRealtime();
+        const { data } = await sbClient.auth.getSession();
+        if (data && data.session) this.showDash(); else this.view = "login";
+      },
 
-  async function loadRegistrations() {
-    loadingState.hidden = false;
-    emptyState.hidden = true;
-    const { data, error } = await sbClient
-      .from("registrations")
-      .select("*")
-      .order("created_at", { ascending: false });
+      showDash() {
+        this.view = "dash";
+        this.loadRegistrations();
+      },
 
-    loadingState.hidden = true;
+      async login() {
+        this.loginError = "";
+        this.loggingIn = true;
+        const { error } = await sbClient.auth.signInWithPassword({ email: this.email.trim(), password: this.password });
+        this.loggingIn = false;
+        if (error) { this.loginError = error.message; return; }
+        this.showDash();
+      },
 
-    if (error) {
-      console.error("Failed to load registrations:", error.message);
-      tableBody.innerHTML = "";
-      emptyState.textContent = "Couldn't load registrations: " + error.message;
-      emptyState.hidden = false;
-      return;
-    }
+      async signOut() {
+        await sbClient.auth.signOut();
+        this.view = "login";
+      },
 
-    allRows = data || [];
-    applyFilter();
-  }
+      formatDate(iso) {
+        try { return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); }
+        catch (e) { return iso || ""; }
+      },
 
-  function downloadCsv() {
-    const q = searchInput.value.trim().toLowerCase();
-    const rows = !q ? allRows : allRows.filter(function(r) {
-      const haystack = [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase();
-      return haystack.includes(q);
-    });
+      async loadRegistrations() {
+        this.loading = true;
+        this.loadError = "";
+        const { data, error } = await sbClient.from("registrations").select("*").order("created_at", { ascending: false });
+        this.loading = false;
+        if (error) {
+          console.error("Failed to load registrations:", error.message);
+          this.rows = [];
+          this.loadError = "Couldn't load registrations: " + error.message;
+          return;
+        }
+        this.rows = data || [];
+      },
 
-    const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
-    const csvRows = [headers.join(",")];
+      downloadCsv() {
+        const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
+        const csv = [headers.join(",")];
+        this.filtered.forEach(r => {
+          csv.push([r.first_name, r.last_name, r.email, r.phone, r.is_parent, r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at]
+            .map(v => '"' + (v == null ? "" : String(v)).replace(/"/g, '""') + '"').join(","));
+        });
+        const url = URL.createObjectURL(new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" }));
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      },
 
-    rows.forEach(function(r) {
-      const cells = [
-        r.first_name, r.last_name, r.email, r.phone, r.is_parent,
-        r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at
-      ].map(function(v) {
-        const s = v == null ? "" : String(v);
-        return '"' + s.replace(/"/g, '""') + '"';
-      });
-      csvRows.push(cells.join(","));
-    });
+      // ---- Wheel prizes ----
+      openPrizes() {
+        this.tab = "prizes";
+        if (!this.prizesLoaded) { this.prizesLoaded = true; this.loadPrizes(); }
+      },
 
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+      soldOut(p) { return p.quantity != null && (p.given_count || 0) >= p.quantity; },
+      stockLabel(p) {
+        const given = p.given_count || 0;
+        return p.quantity == null ? given + " given · unlimited" : given + " / " + p.quantity + " given";
+      },
 
-  function showDash() {
-    loginWrap.style.display = "none";
-    dash.style.display = "block";
-    loadRegistrations();
-  }
+      async loadPrizes() {
+        this.prizesLoading = true;
+        this.prizesLoadError = "";
+        const { data, error } = await sbClient.from("prizes").select("*")
+          .order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+        this.prizesLoading = false;
+        if (error) {
+          console.error("Failed to load prizes:", error.message);
+          this.prizes = [];
+          this.prizesLoadError = "Couldn't load prizes: " + error.message;
+          return;
+        }
+        this.prizes = data || [];
+      },
 
-  function showLogin() {
-    dash.style.display = "none";
-    loginWrap.style.display = "flex";
-  }
+      async addPrize(form) {
+        this.prizeError = "";
+        const name = this.prizeName.trim();
+        const file = this.prizeFile;
+        if (!name || !file) return;
+        this.addingPrize = true;
+        try {
+          const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+          const path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+          const { error: uploadError } = await sbClient.storage.from("prize-images").upload(path, file, { cacheControl: "3600", upsert: false });
+          if (uploadError) throw uploadError;
+          const { data: pub } = sbClient.storage.from("prize-images").getPublicUrl(path);
+          const qtyRaw = String(this.prizeQty).trim();
+          const { error: insertError } = await sbClient.from("prizes").insert({
+            name, image_url: pub.publicUrl, image_path: path,
+            quantity: qtyRaw ? parseInt(qtyRaw, 10) : null,
+            sort_order: Date.now()
+          });
+          if (insertError) throw insertError;
+          form.reset();
+          this.prizeName = ""; this.prizeQty = ""; this.prizeFile = null;
+          this.loadPrizes();
+        } catch (err) {
+          this.prizeError = "Couldn't add prize: " + (err.message || err);
+        } finally {
+          this.addingPrize = false;
+        }
+      },
 
-  loginForm.addEventListener("submit", async function(e) {
-    e.preventDefault();
-    loginError.hidden = true;
-    loginBtn.disabled = true;
-    loginBtn.textContent = "Logging in...";
+      confirmRemove(p) {
+        this.toRemove = p;
+        this.$refs.removeDialog.showModal();
+      },
 
-    const email = document.getElementById("lbAdminEmail").value.trim();
-    const password = document.getElementById("lbAdminPassword").value;
+      async removePrize() {
+        const p = this.toRemove;
+        this.$refs.removeDialog.close();
+        if (!p) return;
+        this.prizeError = "";
+        const { error } = await sbClient.from("prizes").delete().eq("id", p.id);
+        if (error) {
+          console.error("Failed to remove prize:", error.message);
+          this.prizeError = "Couldn't remove prize: " + error.message;
+          return;
+        }
+        if (p.image_path) {
+          sbClient.storage.from("prize-images").remove([p.image_path]).catch(err => console.warn("Could not delete prize image from storage:", err));
+        }
+        this.toRemove = null;
+        this.loadPrizes();
+      },
 
-    const { error } = await sbClient.auth.signInWithPassword({ email, password });
-
-    loginBtn.disabled = false;
-    loginBtn.textContent = "Log In";
-
-    if (error) {
-      loginError.textContent = error.message;
-      loginError.hidden = false;
-      return;
-    }
-    showDash();
-  });
-
-  document.getElementById("lbSignOutBtn").addEventListener("click", async function() {
-    await sbClient.auth.signOut();
-    showLogin();
-  });
-
-  document.getElementById("lbRefreshBtn").addEventListener("click", loadRegistrations);
-  document.getElementById("lbExportBtn").addEventListener("click", downloadCsv);
-  searchInput.addEventListener("input", applyFilter);
-
-  // ---- Tabs -------------------------------------------------------------
-  const tabRegistrations = document.getElementById("lbTabRegistrations");
-  const tabPrizes = document.getElementById("lbTabPrizes");
-  const panelRegistrations = document.getElementById("lbPanelRegistrations");
-  const panelPrizes = document.getElementById("lbPanelPrizes");
-  let prizesLoaded = false;
-
-  tabRegistrations.addEventListener("click", function() {
-    tabRegistrations.classList.add("active");
-    tabPrizes.classList.remove("active");
-    panelRegistrations.classList.add("active");
-    panelPrizes.classList.remove("active");
-  });
-
-  tabPrizes.addEventListener("click", function() {
-    tabPrizes.classList.add("active");
-    tabRegistrations.classList.remove("active");
-    panelPrizes.classList.add("active");
-    panelRegistrations.classList.remove("active");
-    if (!prizesLoaded) {
-      prizesLoaded = true;
-      loadPrizes();
-    }
-  });
-
-  // ---- Wheel prizes -------------------------------------------------------
-  const prizeForm = document.getElementById("lbPrizeForm");
-  const prizeNameInput = document.getElementById("lbPrizeName");
-  const prizeImageInput = document.getElementById("lbPrizeImage");
-  const prizeQuantityInput = document.getElementById("lbPrizeQuantity");
-  const prizeAddBtn = document.getElementById("lbPrizeAddBtn");
-  const prizeError = document.getElementById("lbPrizeError");
-  const prizeGrid = document.getElementById("lbPrizeGrid");
-  const prizeEmptyState = document.getElementById("lbPrizeEmptyState");
-  const prizeLoadingState = document.getElementById("lbPrizeLoadingState");
-
-  function renderPrizes(prizes) {
-    if (!prizes.length) {
-      prizeGrid.innerHTML = "";
-      prizeEmptyState.hidden = false;
-      return;
-    }
-    prizeEmptyState.hidden = true;
-    prizeGrid.innerHTML = prizes.map(function(p) {
-      const thumb = p.image_url
-        ? '<div class="lb-prize-thumb"><img src="' + escapeHtml(p.image_url) + '" alt=""></div>'
-        : '<div class="lb-prize-thumb">No image</div>';
-      const given = p.given_count || 0;
-      const stockLabel = p.quantity == null
-        ? given + " given &middot; unlimited"
-        : given + " / " + p.quantity + " given";
-      const stockClass = p.quantity != null && given >= p.quantity ? " lb-prize-stock-out" : "";
-      return (
-        '<div class="lb-prize-card" data-id="' + p.id + '">' +
-        thumb +
-        '<p class="lb-prize-name">' + escapeHtml(p.name) + "</p>" +
-        '<p class="lb-prize-stock' + stockClass + '">' + stockLabel + "</p>" +
-        '<button type="button" class="lb-btn-sm lb-prize-remove-btn">Remove</button>' +
-        "</div>"
-      );
-    }).join("");
-  }
-
-  async function loadPrizes() {
-    prizeLoadingState.hidden = false;
-    prizeEmptyState.hidden = true;
-    const { data, error } = await sbClient
-      .from("prizes")
-      .select("*")
-      .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true });
-
-    prizeLoadingState.hidden = true;
-
-    if (error) {
-      console.error("Failed to load prizes:", error.message);
-      prizeGrid.innerHTML = "";
-      prizeEmptyState.textContent = "Couldn't load prizes: " + error.message;
-      prizeEmptyState.hidden = false;
-      return;
-    }
-
-    renderPrizes(data || []);
-  }
-
-  prizeForm.addEventListener("submit", async function(e) {
-    e.preventDefault();
-    prizeError.hidden = true;
-
-    const name = prizeNameInput.value.trim();
-    const file = prizeImageInput.files[0];
-
-    if (!name || !file) return;
-
-    prizeAddBtn.disabled = true;
-    prizeAddBtn.textContent = "Adding...";
-
-    try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-      const path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
-
-      const { error: uploadError } = await sbClient.storage
-        .from("prize-images")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrlData } = sbClient.storage.from("prize-images").getPublicUrl(path);
-
-      const quantityRaw = prizeQuantityInput.value.trim();
-      const quantity = quantityRaw ? parseInt(quantityRaw, 10) : null;
-
-      const { error: insertError } = await sbClient.from("prizes").insert({
-        name: name,
-        image_url: publicUrlData.publicUrl,
-        image_path: path,
-        quantity: quantity,
-        sort_order: Date.now()
-      });
-
-      if (insertError) throw insertError;
-
-      prizeForm.reset();
-      loadPrizes();
-    } catch (err) {
-      prizeError.textContent = "Couldn't add prize: " + (err.message || err);
-      prizeError.hidden = false;
-    } finally {
-      prizeAddBtn.disabled = false;
-      prizeAddBtn.textContent = "Add Prize";
-    }
-  });
-
-  prizeGrid.addEventListener("click", async function(e) {
-    const btn = e.target.closest(".lb-prize-remove-btn");
-    if (!btn) return;
-    const card = btn.closest(".lb-prize-card");
-    const id = card.getAttribute("data-id");
-    if (!confirm("Remove this prize from the wheel?")) return;
-
-    btn.disabled = true;
-    btn.textContent = "Removing...";
-
-    const { data: prizeRow } = await sbClient.from("prizes").select("image_path").eq("id", id).single();
-
-    const { error } = await sbClient.from("prizes").delete().eq("id", id);
-    if (error) {
-      console.error("Failed to remove prize:", error.message);
-      btn.disabled = false;
-      btn.textContent = "Remove";
-      return;
-    }
-
-    if (prizeRow && prizeRow.image_path) {
-      sbClient.storage.from("prize-images").remove([prizeRow.image_path]).catch(function(err) {
-        console.warn("Could not delete prize image from storage:", err);
-      });
-    }
-
-    loadPrizes();
-  });
-
-  // Live updates: new registrations appear, and prizes fill in the moment
-  // the booth's big screen (wheel.html) finishes someone's spin — without
-  // needing a manual refresh either way.
-  sbClient
-    .channel("registrations-changes")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, function(payload) {
-      allRows = [payload.new].concat(allRows);
-      applyFilter();
-    })
-    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, function(payload) {
-      const idx = allRows.findIndex(function(r) { return r.id === payload.new.id; });
-      if (idx !== -1) {
-        allRows[idx] = payload.new;
-        applyFilter();
+      // Live updates: new registrations appear, and prizes fill in the moment
+      // the booth's wheel finishes someone's spin, with no manual refresh.
+      subscribeRealtime() {
+        sbClient.channel("registrations-changes")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, payload => {
+            this.rows = [payload.new].concat(this.rows);
+          })
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, payload => {
+            const idx = this.rows.findIndex(r => r.id === payload.new.id);
+            if (idx !== -1) this.rows[idx] = payload.new;
+          })
+          .subscribe();
       }
-    })
-    .subscribe();
-
-  (async function init() {
-    const { data } = await sbClient.auth.getSession();
-    if (data && data.session) {
-      showDash();
-    } else {
-      showLogin();
-    }
-  })();
+    };
+  }
 </script>
-
 </body>
 </html>
