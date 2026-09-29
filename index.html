@@ -143,7 +143,7 @@
   </div>
 
   <!-- Content -->
-  <main class="relative z-10 w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
+  <main class="relative z-10 w-full max-w-md sm:max-w-lg">
     <header class="text-center mb-6">
       <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
            alt="Love Boo" width="130" loading="eager" class="w-32 mx-auto">
@@ -178,77 +178,73 @@
       <button type="button" id="lbStartBtn" class="btn btn-primary btn-block h-14 sm:h-16 text-base sm:text-lg rounded-2xl">Sign Up &amp; Spin</button>
     </section>
 
-    <!-- Registration form -->
-    <form id="LoveBooKlaviyoSignup" novalidate style="display: none;" class="flex flex-col gap-7">
-      <div class="grid grid-cols-2 gap-4">
-        <label class="flex flex-col gap-3 min-w-0">
-          <span class="text-sm font-bold">First Name</span>
-          <input type="text" id="LbFirst" placeholder="First name" required autocomplete="given-name"
-                 class="input input-bordered w-full h-14 text-base bg-base-100 border-secondary">
-        </label>
-        <label class="flex flex-col gap-3 min-w-0">
-          <span class="text-sm font-bold">Last Name</span>
-          <input type="text" id="LbLast" placeholder="Last name" autocomplete="family-name"
-                 class="input input-bordered w-full h-14 text-base bg-base-100 border-secondary">
-        </label>
+    <!-- Registration form: plain single-column layout, every field stacked
+         the same way (label above field, consistent gap) — deliberately
+         not using multi-column grids, so it behaves identically and never
+         feels cramped on any device from a phone up to a desktop. -->
+    <form id="LoveBooKlaviyoSignup" novalidate style="display: none;" class="flex flex-col gap-6">
+      <div class="flex flex-col gap-2">
+        <label for="LbFirst" class="text-sm font-semibold">First Name</label>
+        <input type="text" id="LbFirst" placeholder="First name" required autocomplete="given-name"
+               class="input input-bordered w-full h-12 text-base bg-base-100 border-secondary">
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label class="flex flex-col gap-3 min-w-0">
-          <span class="text-sm font-bold">Email Address</span>
-          <input type="email" id="LbEmail" placeholder="email@example.com" required autocomplete="email" inputmode="email"
-                 class="input input-bordered w-full h-14 text-base bg-base-100 border-secondary">
-        </label>
+      <div class="flex flex-col gap-2">
+        <label for="LbLast" class="text-sm font-semibold">Last Name</label>
+        <input type="text" id="LbLast" placeholder="Last name" autocomplete="family-name"
+               class="input input-bordered w-full h-12 text-base bg-base-100 border-secondary">
+      </div>
 
-        <div class="flex flex-col gap-3 min-w-0">
-          <label for="LbPhoneInput" class="text-sm font-bold">Phone Number</label>
-          <div class="flex gap-3">
-            <select id="LbCountryCode" aria-label="Country Dialing Code"
-                    class="select select-bordered w-24 sm:w-28 shrink-0 h-14 text-base font-semibold bg-base-100 border-secondary">
-              <option value="+971" selected>+971</option>
-              <option value="+973">+973</option>
-              <option value="+966">+966</option>
-              <option value="+965">+965</option>
-              <option value="+968">+968</option>
-              <option value="+974">+974</option>
-              <option value="+44">+44</option>
-              <option value="+1">+1</option>
-              <option value="+91">+91</option>
-              <option value="+61">+61</option>
-              <option value="+33">+33</option>
-              <option value="+49">+49</option>
-              <option value="+92">+92</option>
-              <option value="+63">+63</option>
-              <option value="+20">+20</option>
-              <option value="+962">+962</option>
-              <option value="+961">+961</option>
-            </select>
-            <input type="tel" id="LbPhoneInput" placeholder="Mobile number" autocomplete="tel" inputmode="tel"
-                   class="input input-bordered flex-1 min-w-0 h-14 text-base bg-base-100 border-secondary">
-          </div>
+      <div class="flex flex-col gap-2">
+        <label for="LbEmail" class="text-sm font-semibold">Email Address</label>
+        <input type="email" id="LbEmail" placeholder="email@example.com" required autocomplete="email" inputmode="email"
+               class="input input-bordered w-full h-12 text-base bg-base-100 border-secondary">
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="LbPhoneInput" class="text-sm font-semibold">Phone Number</label>
+        <div class="flex gap-2">
+          <select id="LbCountryCode" aria-label="Country Dialing Code"
+                  class="select select-bordered w-28 shrink-0 h-12 text-base font-semibold bg-base-100 border-secondary">
+            <option value="+971" selected>+971</option>
+            <option value="+973">+973</option>
+            <option value="+966">+966</option>
+            <option value="+965">+965</option>
+            <option value="+968">+968</option>
+            <option value="+974">+974</option>
+            <option value="+44">+44</option>
+            <option value="+1">+1</option>
+            <option value="+91">+91</option>
+            <option value="+61">+61</option>
+            <option value="+33">+33</option>
+            <option value="+49">+49</option>
+            <option value="+92">+92</option>
+            <option value="+63">+63</option>
+            <option value="+20">+20</option>
+            <option value="+962">+962</option>
+            <option value="+961">+961</option>
+          </select>
+          <input type="tel" id="LbPhoneInput" placeholder="Mobile number" autocomplete="tel" inputmode="tel"
+                 class="input input-bordered flex-1 min-w-0 h-12 text-base bg-base-100 border-secondary">
         </div>
       </div>
 
-      <div class="flex flex-col gap-3">
-        <span class="text-sm font-bold">Are you a parent?</span>
-        <!-- A real <span> holds the visible text, toggled by a hidden radio
-             + peer-checked — more reliable than styling a bare radio input
-             directly, since pseudo-element content on native form controls
-             renders inconsistently (or not at all) across browsers. -->
-        <div class="flex gap-3" role="radiogroup" aria-label="Are you a parent?">
-          <label class="flex-1 cursor-pointer">
-            <input type="radio" name="parent_status" value="Yes" class="peer sr-only" checked>
-            <span class="flex items-center justify-center h-14 text-base font-semibold rounded-2xl border-2 border-secondary bg-base-100 text-base-content peer-checked:bg-primary peer-checked:text-primary-content peer-checked:border-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-colors">Yes</span>
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-semibold">Are you a parent?</span>
+        <div class="flex gap-6" role="radiogroup" aria-label="Are you a parent?">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="parent_status" value="Yes" class="radio radio-primary" checked>
+            <span class="text-base">Yes</span>
           </label>
-          <label class="flex-1 cursor-pointer">
-            <input type="radio" name="parent_status" value="No" class="peer sr-only">
-            <span class="flex items-center justify-center h-14 text-base font-semibold rounded-2xl border-2 border-secondary bg-base-100 text-base-content peer-checked:bg-primary peer-checked:text-primary-content peer-checked:border-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-colors">No</span>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" name="parent_status" value="No" class="radio radio-primary">
+            <span class="text-base">No</span>
           </label>
         </div>
       </div>
 
       <label class="flex items-start gap-3 cursor-pointer text-sm leading-snug" for="LbTerms">
-        <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-6 shrink-0 rounded-md">
+        <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-5 shrink-0 rounded-md mt-0.5">
         <span>I agree to the <a class="link link-primary font-semibold" href="https://loveboo.com/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a class="link link-primary font-semibold" href="https://loveboo.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
       </label>
 
@@ -256,7 +252,7 @@
         By signing up, you agree to receive Love Boo event updates and exclusive offers via email and SMS. You can unsubscribe at any time.
       </p>
 
-      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 sm:h-16 text-base sm:text-lg rounded-2xl">Sign Up</button>
+      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl">Sign Up</button>
     </form>
   </main>
 
