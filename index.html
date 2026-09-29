@@ -243,14 +243,20 @@
         </div>
       </div>
 
-      <label class="flex items-start gap-3 cursor-pointer text-sm leading-snug" for="LbTerms">
-        <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-5 shrink-0 rounded-md mt-0.5">
-        <span>I agree to the <a class="link link-primary font-semibold" href="https://loveboo.com/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a class="link link-primary font-semibold" href="https://loveboo.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
-      </label>
+      <!-- Visually its own step, separate from the fields above: a thin
+           divider plus extra top margin, since a dense two-line legal
+           paragraph landing right after a short radio row (same gap as
+           every other field-to-field transition) read as cramped. -->
+      <div class="border-t border-secondary/40 pt-6 mt-2 flex flex-col gap-4">
+        <label class="flex items-start gap-3 cursor-pointer text-sm leading-snug" for="LbTerms">
+          <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-5 shrink-0 rounded-md mt-0.5">
+          <span>I agree to the <a class="link link-primary font-semibold" href="https://loveboo.com/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a class="link link-primary font-semibold" href="https://loveboo.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
+        </label>
 
-      <p class="text-xs leading-snug text-center text-[#6C7D6E]">
-        By signing up, you agree to receive Love Boo event updates and exclusive offers via email and SMS. You can unsubscribe at any time.
-      </p>
+        <p class="text-xs leading-snug text-center text-[#6C7D6E]">
+          By signing up, you agree to receive Love Boo event updates and exclusive offers via email and SMS. You can unsubscribe at any time.
+        </p>
+      </div>
 
       <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl">Sign Up</button>
     </form>
