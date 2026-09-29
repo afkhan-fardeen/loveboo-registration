@@ -231,9 +231,19 @@
 
       <div class="flex flex-col gap-3">
         <span class="text-sm font-bold">Are you a parent?</span>
-        <div class="join w-full" role="radiogroup" aria-label="Are you a parent?">
-          <input class="join-item btn btn-outline btn-primary flex-1 h-14 text-base" type="radio" name="parent_status" value="Yes" aria-label="Yes" checked>
-          <input class="join-item btn btn-outline btn-primary flex-1 h-14 text-base" type="radio" name="parent_status" value="No" aria-label="No">
+        <!-- A real <span> holds the visible text, toggled by a hidden radio
+             + peer-checked — more reliable than styling a bare radio input
+             directly, since pseudo-element content on native form controls
+             renders inconsistently (or not at all) across browsers. -->
+        <div class="flex gap-3" role="radiogroup" aria-label="Are you a parent?">
+          <label class="flex-1 cursor-pointer">
+            <input type="radio" name="parent_status" value="Yes" class="peer sr-only" checked>
+            <span class="flex items-center justify-center h-14 text-base font-semibold rounded-2xl border-2 border-secondary bg-base-100 text-base-content peer-checked:bg-primary peer-checked:text-primary-content peer-checked:border-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-colors">Yes</span>
+          </label>
+          <label class="flex-1 cursor-pointer">
+            <input type="radio" name="parent_status" value="No" class="peer sr-only">
+            <span class="flex items-center justify-center h-14 text-base font-semibold rounded-2xl border-2 border-secondary bg-base-100 text-base-content peer-checked:bg-primary peer-checked:text-primary-content peer-checked:border-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary transition-colors">No</span>
+          </label>
         </div>
       </div>
 
