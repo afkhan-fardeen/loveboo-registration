@@ -229,13 +229,13 @@
         </div>
       </div>
 
-      <fieldset class="flex flex-col gap-3">
-        <legend class="text-sm font-bold mb-1">Are you a parent?</legend>
-        <div class="join w-full">
+      <div class="flex flex-col gap-3">
+        <span class="text-sm font-bold">Are you a parent?</span>
+        <div class="join w-full" role="radiogroup" aria-label="Are you a parent?">
           <input class="join-item btn btn-outline btn-primary flex-1 h-14 text-base" type="radio" name="parent_status" value="Yes" aria-label="Yes" checked>
           <input class="join-item btn btn-outline btn-primary flex-1 h-14 text-base" type="radio" name="parent_status" value="No" aria-label="No">
         </div>
-      </fieldset>
+      </div>
 
       <label class="flex items-start gap-3 cursor-pointer text-sm leading-snug" for="LbTerms">
         <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-6 shrink-0 rounded-md">
