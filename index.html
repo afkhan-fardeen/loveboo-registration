@@ -118,7 +118,7 @@
   </div>
 
   <!-- Content -->
-  <main class="relative z-10 w-full max-w-md md:max-w-lg">
+  <main class="relative z-10 w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
     <header class="text-center mb-6">
       <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
            alt="Love Boo" width="130" loading="eager" class="w-32 mx-auto">
@@ -133,23 +133,24 @@
           <path d="M4 12.5L9.5 18L20 6" stroke="#006D68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <img id="lbPrizeImage" class="lb-prize-image size-28 md:size-36 object-contain mx-auto mb-4" alt="">
-      <h2 id="lbSuccessTitle" class="text-2xl font-extrabold mb-2">Thank you!</h2>
+      <img id="lbPrizeImage" class="lb-prize-image size-28 sm:size-32 md:size-40 lg:size-44 object-contain mx-auto mb-4" alt="">
+      <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
+      <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
     </section>
 
     <!-- Landing / spin panel (one wheel used for both idle preview and live spin) -->
     <section id="lbWheelPanel" class="text-center">
-      <h1 id="lbWheelHeading" class="text-2xl font-extrabold mb-1">Spin to Win!</h1>
+      <h1 id="lbWheelHeading" class="text-2xl sm:text-3xl font-extrabold mb-1">Spin to Win!</h1>
       <p id="lbWheelSub" class="text-sm opacity-80 mb-6">Sign up in seconds for a chance to win a prize.</p>
-      <div class="relative aspect-square w-full max-w-xs sm:max-w-sm mx-auto mb-5">
+      <div class="relative aspect-square w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto mb-5">
         <div class="lb-wheel-pointer" aria-hidden="true"></div>
         <div class="lb-wheel" id="lbWheel" aria-hidden="true">
           <div class="lb-wheel-hub"></div>
         </div>
       </div>
-      <p id="lbSpinStatus" class="min-h-5 text-sm font-bold text-primary mb-2" aria-live="polite" hidden></p>
-      <button type="button" id="lbStartBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl">Sign Up &amp; Spin</button>
+      <p id="lbSpinStatus" class="min-h-5 text-sm sm:text-base font-bold text-primary mb-2" aria-live="polite" hidden></p>
+      <button type="button" id="lbStartBtn" class="btn btn-primary btn-block h-14 sm:h-16 text-base sm:text-lg rounded-2xl">Sign Up &amp; Spin</button>
     </section>
 
     <!-- Registration form -->
@@ -218,7 +219,7 @@
         By signing up, you agree to receive Love Boo event updates and exclusive offers via email and SMS. You can unsubscribe at any time.
       </p>
 
-      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl">Sign Up</button>
+      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 sm:h-16 text-base sm:text-lg rounded-2xl">Sign Up</button>
     </form>
   </main>
 
@@ -348,7 +349,7 @@
   async function sendSupabaseOnce(row) {
     if (!sbClient) return false;
     try {
-      const { error } = await sbClient.from("registrations").insert(row);
+      const { error } = await sbClient.from("registrations").insert({ ...row, klaviyo_synced: true });
       if (error) {
         console.warn("Supabase insert failed:", error.message);
         return false;
@@ -377,7 +378,17 @@
     flushInFlight = true;
     try {
       for (const item of readQueue(KLAVIYO_QUEUE_KEY)) {
-        if (await sendKlaviyoOnce(item.payload)) removeFromQueue(KLAVIYO_QUEUE_KEY, item.id);
+        // New shape: { klaviyo, row }. Older queued items are the bare Klaviyo payload.
+        const isCombined = !!(item.payload && item.payload.klaviyo);
+        const klaviyoPayload = isCombined ? item.payload.klaviyo : item.payload;
+        if (await sendKlaviyoOnce(klaviyoPayload)) {
+          removeFromQueue(KLAVIYO_QUEUE_KEY, item.id);
+          // Only now is the guest confirmed in Klaviyo, so only now do they
+          // become visible in admin.
+          if (isCombined && !(await sendSupabaseOnce(item.payload.row))) {
+            enqueue(SUPABASE_QUEUE_KEY, item.payload.row);
+          }
+        }
       }
       for (const item of readQueue(SUPABASE_QUEUE_KEY)) {
         if (await sendSupabaseOnce(item.payload)) removeFromQueue(SUPABASE_QUEUE_KEY, item.id);
@@ -407,6 +418,7 @@
     const successBadge = document.getElementById("lbSuccessBadge");
     const successTitle = document.getElementById("lbSuccessTitle");
     const successMessage = document.getElementById("lbSuccessMessage");
+    const successEmail = document.getElementById("lbSuccessEmail");
     const prizeImage = document.getElementById("lbPrizeImage");
     const wheelPanel = document.getElementById("lbWheelPanel");
     const wheelHeading = document.getElementById("lbWheelHeading");
@@ -550,6 +562,14 @@
     }
 
     // ---- View management ---------------------------------------------
+    // wheelMode drives what the single shared button on the wheel panel
+    // does when tapped: "landing" opens the form, "ready" fires a spin.
+    // The wheel never spins on its own — every spin, including the
+    // "Try Again" retry, waits for an explicit tap.
+    let wheelMode = "landing";
+    let pendingRegistration = null;
+    let spinCount = 0;
+
     function showLanding() {
       form.style.display = "none";
       successView.style.display = "none";
@@ -560,6 +580,8 @@
       spinStatus.hidden = true;
       startBtn.hidden = false;
       startBtn.disabled = false;
+      startBtn.textContent = "Sign Up & Spin";
+      wheelMode = "landing";
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -575,17 +597,30 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function showSpinning() {
+    // Wheel is built and sitting still, waiting for the guest to tap the
+    // spin button themselves.
+    function showReadyToSpin(label) {
       form.style.display = "none";
       successView.style.display = "none";
       wheelPanel.style.display = "block";
-      wheelHeading.textContent = "Spinning...";
+      wheelHeading.textContent = "Spin to Win!";
       wheelSub.hidden = true;
       wheelSub.style.display = "none";
+      spinStatus.hidden = false;
+      spinStatus.textContent = "Tap the button below to spin!";
+      startBtn.hidden = false;
+      startBtn.disabled = false;
+      startBtn.textContent = label || "Spin the Wheel";
+      wheelMode = "ready";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showSpinning() {
+      wheelHeading.textContent = "Spinning...";
       startBtn.hidden = true;
       spinStatus.hidden = false;
       spinStatus.textContent = "Good luck!";
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      wheelMode = "spinning";
     }
 
     function revealResult(prize, imageUrl) {
@@ -607,12 +642,134 @@
         successTitle.textContent = "Thanks for playing!";
         successMessage.textContent = "You're registered — no prize this time, but keep an eye out for future giveaways.";
       }
+      successEmail.textContent = pendingRegistration ? "Registered with " + pendingRegistration.email : "";
       successView.style.display = "block";
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // Runs exactly one spin. Used both for the guest's first tap and for
+    // every subsequent "Spin Again" tap after a Try Again — nothing spins
+    // automatically.
+    async function doSpin() {
+      showSpinning();
+
+      const targetIndex = Math.floor(Math.random() * wheelSegments.length);
+      spinCount++;
+      await spinToIndex(targetIndex);
+      const seg = wheelSegments[targetIndex];
+
+      if (seg === TRY_AGAIN && spinCount < 2) {
+        spinStatus.textContent = "So close! One more spin...";
+        await sleep(900);
+        showReadyToSpin("Spin Again");
+        return;
+      }
+
+      let finalPrize = null;
+      let finalPrizeImage = null;
+
+      if (seg === TRY_AGAIN || !seg.id) {
+        // Landed on Try Again (out of retries), or the unlimited "Mystery
+        // Gift" placeholder used when nothing's configured in admin yet.
+        finalPrize = seg === TRY_AGAIN ? null : seg.name;
+        finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
+      } else {
+        // Atomically claim a real, tracked prize. If someone else just took
+        // the last unit at the same moment, this comes back false and we
+        // gracefully fall back to a no-prize outcome rather than promising
+        // something that's no longer available.
+        let claimed = false;
+        try {
+          const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
+          claimed = !error && data === true;
+        } catch (err) {
+          claimed = false;
+        }
+        if (claimed) {
+          finalPrize = seg.name;
+          finalPrizeImage = seg.image_url;
+        }
+      }
+
+      spinStatus.textContent = finalPrize ? "Landed on " + finalPrize + "!" : "No prize this time.";
+      await sleep(2200);
+      await finishRegistration(finalPrize, finalPrizeImage);
+    }
+
+    // Sends the already-validated, already-spun registration to Klaviyo +
+    // Supabase and shows the result. Split out from the form submit handler
+    // because it now fires after the guest has tapped to spin, not before.
+    async function finishRegistration(finalPrize, finalPrizeImage) {
+      const p = pendingRegistration;
+
+      const customProperties = {
+        is_parent: p.isParent,
+        event: "Dubai Baby Expo 2026",
+        source: p.utmParams.utm_source || "baby_expo_2026",
+        prize: finalPrize || "None",
+        ...p.utmParams
+      };
+
+      const profileAttributes = {
+        email: p.email,
+        first_name: p.firstName,
+        properties: customProperties
+      };
+      if (p.lastName) profileAttributes.last_name = p.lastName;
+      if (p.fullPhone) profileAttributes.phone_number = p.fullPhone;
+
+      const klaviyoPayload = {
+        data: {
+          type: "subscription",
+          attributes: {
+            custom_source: p.utmParams.utm_campaign || p.utmParams.utm_source || "Dubai Baby Expo 2026",
+            profile: { data: { type: "profile", attributes: profileAttributes } }
+          },
+          relationships: { list: { data: { type: "list", id: KLAVIYO_LIST_ID } } }
+        }
+      };
+
+      const supabaseRow = {
+        first_name: p.firstName,
+        last_name: p.lastName || null,
+        email: p.email,
+        phone: p.fullPhone || null,
+        is_parent: p.isParent,
+        source: p.utmParams.utm_source || "baby_expo_2026",
+        prize: finalPrize,
+        utm_source: p.utmParams.utm_source || null,
+        utm_medium: p.utmParams.utm_medium || null,
+        utm_campaign: p.utmParams.utm_campaign || null,
+        utm_term: p.utmParams.utm_term || null,
+        utm_content: p.utmParams.utm_content || null
+      };
+
+      // Klaviyo is the source of truth for who counts as registered: the
+      // Supabase row (which admin reads) is only written once Klaviyo has
+      // confirmed the guest. If Klaviyo can't be reached, both are queued
+      // together and sent in that order when the connection is back.
+      const queueBoth = () => enqueue(KLAVIYO_QUEUE_KEY, { klaviyo: klaviyoPayload, row: supabaseRow });
+      if (!navigator.onLine) {
+        queueBoth();
+      } else if (await sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS)) {
+        if (!(await sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS))) {
+          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
+        }
+      } else {
+        queueBoth();
+      }
+
+      revealResult(finalPrize, finalPrizeImage);
+    }
+
     if (startBtn) {
-      startBtn.addEventListener("click", showFormView);
+      startBtn.addEventListener("click", function() {
+        if (wheelMode === "landing") {
+          showFormView();
+        } else if (wheelMode === "ready") {
+          doSpin();
+        }
+      });
     }
 
     showLanding();
@@ -652,148 +809,30 @@
         submitBtn.disabled = true;
         submitBtn.textContent = "One sec...";
 
-        const firstName = firstInput.value.trim();
-        const lastName = document.getElementById("LbLast").value.trim();
-        const email = emailInput.value.trim();
-
         const countryCode = document.getElementById("LbCountryCode").value;
         const rawPhoneInput = document.getElementById("LbPhoneInput").value;
-        const fullPhone = formatMobilePhone(rawPhoneInput, countryCode);
-
         const parentChecked = document.querySelector('input[name="parent_status"]:checked');
-        const isParent = parentChecked ? parentChecked.value : "Yes";
 
-        const utmParams = getUrlParams();
+        // Held onto until the guest actually taps to spin — nothing is sent
+        // to Klaviyo/Supabase yet, since the prize isn't known until then.
+        pendingRegistration = {
+          firstName: firstInput.value.trim(),
+          lastName: document.getElementById("LbLast").value.trim(),
+          email: emailInput.value.trim(),
+          fullPhone: formatMobilePhone(rawPhoneInput, countryCode),
+          isParent: parentChecked ? parentChecked.value : "Yes",
+          utmParams: getUrlParams()
+        };
+        spinCount = 0;
 
-        showSpinning();
         resetWheelRotation();
-
         const prizes = await fetchAvailablePrizes();
         setWheelSegments(prizes);
         layoutWheelLabels();
-        await sleep(300);
-
-        let spinCount = 0;
-        let finalPrize = null;
-        let finalPrizeImage = null;
-        while (true) {
-          spinCount++;
-          const targetIndex = Math.floor(Math.random() * wheelSegments.length);
-          await spinToIndex(targetIndex);
-          const seg = wheelSegments[targetIndex];
-
-          if (seg === TRY_AGAIN && spinCount < 2) {
-            spinStatus.textContent = "So close! One more spin...";
-            await sleep(1200);
-            continue;
-          }
-
-          if (seg === TRY_AGAIN || !seg.id) {
-            // Landed on Try Again, or the unlimited "Mystery Gift" placeholder
-            // used when nothing's configured in admin yet.
-            finalPrize = seg === TRY_AGAIN ? null : seg.name;
-            finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
-          } else {
-            // Atomically claim a real, tracked prize. If someone else just
-            // took the last unit at the same moment, this comes back false
-            // and we gracefully fall back to a no-prize outcome rather than
-            // promising something that's no longer available.
-            let claimed = false;
-            try {
-              const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
-              claimed = !error && data === true;
-            } catch (err) {
-              claimed = false;
-            }
-            if (claimed) {
-              finalPrize = seg.name;
-              finalPrizeImage = seg.image_url;
-            } else {
-              finalPrize = null;
-              finalPrizeImage = null;
-            }
-          }
-          break;
-        }
-
-        spinStatus.textContent = finalPrize ? "Landed on " + finalPrize + "!" : "No prize this time.";
-        await sleep(2200);
-
-        const customProperties = {
-          is_parent: isParent,
-          event: "Dubai Baby Expo 2026",
-          source: utmParams.utm_source || "baby_expo_2026",
-          prize: finalPrize || "None",
-          ...utmParams
-        };
-
-        const profileAttributes = {
-          email: email,
-          first_name: firstName,
-          properties: customProperties
-        };
-
-        if (lastName) {
-          profileAttributes.last_name = lastName;
-        }
-
-        if (fullPhone) {
-          profileAttributes.phone_number = fullPhone;
-        }
-
-        const klaviyoPayload = {
-          data: {
-            type: "subscription",
-            attributes: {
-              custom_source: utmParams.utm_campaign || utmParams.utm_source || "Dubai Baby Expo 2026",
-              profile: {
-                data: {
-                  type: "profile",
-                  attributes: profileAttributes
-                }
-              }
-            },
-            relationships: {
-              list: {
-                data: {
-                  type: "list",
-                  id: KLAVIYO_LIST_ID
-                }
-              }
-            }
-          }
-        };
-
-        const supabaseRow = {
-          first_name: firstName,
-          last_name: lastName || null,
-          email: email,
-          phone: fullPhone || null,
-          is_parent: isParent,
-          source: utmParams.utm_source || "baby_expo_2026",
-          prize: finalPrize,
-          utm_source: utmParams.utm_source || null,
-          utm_medium: utmParams.utm_medium || null,
-          utm_campaign: utmParams.utm_campaign || null,
-          utm_term: utmParams.utm_term || null,
-          utm_content: utmParams.utm_content || null
-        };
-
-        if (!navigator.onLine) {
-          enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
-          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
-        } else {
-          const [klaviyoConfirmed, supabaseConfirmed] = await Promise.all([
-            sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS),
-            sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS)
-          ]);
-          if (!klaviyoConfirmed) enqueue(KLAVIYO_QUEUE_KEY, klaviyoPayload);
-          if (!supabaseConfirmed) enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
-        }
 
         submitBtn.disabled = false;
         submitBtn.textContent = "Sign Up";
-        revealResult(finalPrize, finalPrizeImage);
+        showReadyToSpin("Spin the Wheel");
       });
     }
 
