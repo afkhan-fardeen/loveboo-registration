@@ -134,7 +134,29 @@
       <span class="text-sm opacity-75 whitespace-nowrap" x-text="filtered.length + (filtered.length === 1 ? ' registration' : ' registrations')"></span>
     </div>
 
-    <div class="card bg-base-100 border border-secondary overflow-auto max-h-[65vh]">
+    <!-- Phones: one card per registration -->
+    <div class="sm:hidden flex flex-col gap-3">
+      <template x-for="r in filtered" :key="r.id">
+        <div class="card bg-base-100 border border-secondary">
+          <div class="card-body p-4 gap-1 text-sm">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-extrabold text-base break-words" x-text="[r.first_name, r.last_name].filter(Boolean).join(' ')"></p>
+              <span class="badge badge-accent badge-sm shrink-0" x-show="r.prize" x-text="r.prize"></span>
+            </div>
+            <p class="break-all" x-text="r.email"></p>
+            <p x-show="r.phone" x-text="r.phone"></p>
+            <div class="flex flex-wrap items-center gap-2 mt-1 text-xs opacity-75">
+              <span class="badge badge-secondary badge-sm" x-text="'Parent: ' + (r.is_parent || '—')"></span>
+              <span x-text="r.source || ''"></span>
+              <span x-text="formatDate(r.created_at)"></span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Tablet and up: table -->
+    <div class="hidden sm:block card bg-base-100 border border-secondary overflow-auto max-h-[65vh]">
       <table class="table table-pin-rows table-zebra">
         <thead>
           <tr class="bg-base-300">
@@ -158,9 +180,9 @@
           </template>
         </tbody>
       </table>
-      <div class="text-center py-12 opacity-70" x-show="loading"><span class="loading loading-dots loading-md"></span></div>
-      <div class="text-center py-12 opacity-70" x-show="!loading && !filtered.length" x-text="loadError || 'No registrations yet.'"></div>
     </div>
+    <div class="text-center py-12 opacity-70" x-show="loading"><span class="loading loading-dots loading-md"></span></div>
+    <div class="text-center py-12 opacity-70" x-show="!loading && !filtered.length" x-text="loadError || 'No registrations yet.'"></div>
   </section>
 
   <!-- Prizes -->
@@ -200,7 +222,10 @@
           <div class="card-body p-3 gap-1 items-center">
             <p class="font-bold text-sm break-words" x-text="p.name"></p>
             <span class="badge badge-sm" :class="soldOut(p) ? 'badge-error' : 'badge-secondary'" x-text="stockLabel(p)"></span>
-            <button type="button" class="btn btn-outline btn-error btn-sm btn-block mt-2" @click="confirmRemove(p)">Remove</button>
+            <div class="flex gap-2 w-full mt-2">
+              <button type="button" class="btn btn-outline btn-primary btn-sm flex-1" @click="openEdit(p)">Edit</button>
+              <button type="button" class="btn btn-outline btn-error btn-sm flex-1" @click="confirmRemove(p)">Remove</button>
+            </div>
           </div>
         </div>
       </template>
@@ -210,6 +235,45 @@
          x-text="prizesLoadError || 'No prizes added yet — the wheel will use a placeholder until you add some.'"></div>
   </section>
 </div>
+
+<!-- Edit prize -->
+<dialog class="modal modal-bottom sm:modal-middle" x-ref="editDialog">
+  <form class="modal-box" @submit.prevent="saveEdit()">
+    <h3 class="font-extrabold text-lg mb-3">Edit prize</h3>
+    <div class="flex flex-col gap-3" x-show="edit">
+      <div class="flex items-center gap-3">
+        <div class="size-16 rounded-xl bg-base-200 overflow-hidden shrink-0">
+          <img :src="editPreview || (edit && edit.image_url)" alt="" class="w-full h-full object-cover" x-show="editPreview || (edit && edit.image_url)">
+        </div>
+        <input type="file" accept="image/*" class="file-input file-input-bordered w-full bg-base-200"
+               @change="editFile = $event.target.files[0]; editPreview = editFile ? URL.createObjectURL(editFile) : ''">
+      </div>
+      <label class="flex flex-col gap-1">
+        <span class="text-xs font-bold">Prize name</span>
+        <input type="text" required class="input input-bordered w-full bg-base-200" x-model="editName">
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-bold">Quantity</span>
+          <input type="number" min="1" step="1" placeholder="Unlimited" class="input input-bordered w-full bg-base-200" x-model="editQty">
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-bold">Given so far</span>
+          <input type="number" min="0" step="1" class="input input-bordered w-full bg-base-200" x-model="editGiven">
+        </label>
+      </div>
+      <div role="alert" class="alert alert-error alert-soft text-sm" x-show="editError" x-text="editError"></div>
+    </div>
+    <div class="modal-action">
+      <button type="button" class="btn btn-ghost" @click="$refs.editDialog.close()">Cancel</button>
+      <button type="submit" class="btn btn-primary" :disabled="savingEdit">
+        <span class="loading loading-spinner loading-sm" x-show="savingEdit"></span>
+        Save changes
+      </button>
+    </div>
+  </form>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 
 <!-- Remove-prize confirmation -->
 <dialog class="modal" x-ref="removeDialog">
@@ -242,6 +306,7 @@
       prizes: [], prizesLoading: false, prizesLoaded: false, prizesLoadError: "",
       prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
       toRemove: null,
+      edit: null, editName: "", editQty: "", editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
 
       get filtered() {
         const q = this.search.trim().toLowerCase();
@@ -281,7 +346,7 @@
       async loadRegistrations() {
         this.loading = true;
         this.loadError = "";
-        const { data, error } = await sbClient.from("registrations").select("*").order("created_at", { ascending: false });
+        const { data, error } = await sbClient.from("registrations").select("*").eq("klaviyo_synced", true).order("created_at", { ascending: false });
         this.loading = false;
         if (error) {
           console.error("Failed to load registrations:", error.message);
@@ -365,6 +430,53 @@
         }
       },
 
+      openEdit(p) {
+        this.edit = p;
+        this.editName = p.name;
+        this.editQty = p.quantity == null ? "" : p.quantity;
+        this.editGiven = p.given_count || 0;
+        this.editFile = null;
+        this.editPreview = "";
+        this.editError = "";
+        this.$refs.editDialog.showModal();
+      },
+
+      async saveEdit() {
+        const p = this.edit;
+        const name = this.editName.trim();
+        if (!p || !name) return;
+        this.savingEdit = true;
+        this.editError = "";
+        try {
+          const qtyRaw = String(this.editQty).trim();
+          const changes = {
+            name,
+            quantity: qtyRaw ? parseInt(qtyRaw, 10) : null,
+            given_count: Math.max(0, parseInt(this.editGiven, 10) || 0)
+          };
+          let oldPath = null;
+          if (this.editFile) {
+            const file = this.editFile;
+            const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+            const path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
+            const { error: upErr } = await sbClient.storage.from("prize-images").upload(path, file, { cacheControl: "3600", upsert: false });
+            if (upErr) throw upErr;
+            changes.image_url = sbClient.storage.from("prize-images").getPublicUrl(path).data.publicUrl;
+            changes.image_path = path;
+            oldPath = p.image_path;
+          }
+          const { error } = await sbClient.from("prizes").update(changes).eq("id", p.id);
+          if (error) throw error;
+          if (oldPath) sbClient.storage.from("prize-images").remove([oldPath]).catch(() => {});
+          this.$refs.editDialog.close();
+          this.loadPrizes();
+        } catch (err) {
+          this.editError = "Couldn't save: " + (err.message || err);
+        } finally {
+          this.savingEdit = false;
+        }
+      },
+
       confirmRemove(p) {
         this.toRemove = p;
         this.$refs.removeDialog.showModal();
@@ -393,7 +505,7 @@
       subscribeRealtime() {
         sbClient.channel("registrations-changes")
           .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, payload => {
-            this.rows = [payload.new].concat(this.rows);
+            if (payload.new.klaviyo_synced) this.rows = [payload.new].concat(this.rows);
           })
           .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, payload => {
             const idx = this.rows.findIndex(r => r.id === payload.new.id);
