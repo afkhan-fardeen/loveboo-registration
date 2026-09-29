@@ -297,6 +297,14 @@
 <script>
   const sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // Module-level (not inside adminApp's returned object) so it survives
+  // even if Alpine's x-init somehow fires more than once for the same
+  // page load (seen with some live-reload dev tooling) — a channel can't
+  // have listeners added to it once subscribed, so re-creating it on a
+  // second init() would throw. This guard makes the subscription a
+  // true one-time action regardless of how many times init() runs.
+  let realtimeSubscribed = false;
+
   function matches(r, q) {
     if (!q) return true;
     return [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase().includes(q);
@@ -520,6 +528,8 @@
       // Live updates: new registrations appear, and prizes fill in the moment
       // the booth's wheel finishes someone's spin, with no manual refresh.
       subscribeRealtime() {
+        if (realtimeSubscribed) return;
+        realtimeSubscribed = true;
         sbClient.channel("registrations-changes")
           .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, payload => {
             if (payload.new.klaviyo_synced) this.rows = [payload.new].concat(this.rows);
