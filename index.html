@@ -2,7 +2,7 @@
 <html lang="en" data-theme="loveboo">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Love Boo | Baby Expo 2026 Registration</title>
 <meta name="description" content="Register for Love Boo at Dubai Baby Expo 2026 and collect your gift bag at our booth.">
 <link rel="icon" href="favicon.png">
@@ -17,12 +17,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="vendor/daisyui.css" rel="stylesheet" type="text/css">
+<script src="vendor/tailwind-browser.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="supabase-config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="vendor/anime.min.js"></script>
+<script src="vendor/confetti.browser.min.js"></script>
 
 <style>
   /* Love Boo theme for daisyUI (same tokens as admin.html). */
@@ -115,11 +115,27 @@
   .lb-prize-image { display: none; }
   .lb-prize-image.visible { display: block; }
   .lb-bloom { position: absolute; opacity: 0.32; pointer-events: none; }
+
+  /* ---- Fit the screen, not just the width ----
+     The wheel is sized by whichever is smaller: the available width or the
+     height left after the logo/heading/button, so the landing and spin
+     screens fit one laptop-sized viewport without scrolling. */
+  .lb-wheel-stage { width: min(100%, 26rem, max(13rem, calc(100dvh - 25rem))); }
+  .lb-prize-image { width: min(100%, 30rem, max(12rem, calc(100dvh - 22rem))); height: auto; aspect-ratio: 1; }
+  @media (max-height: 820px) {
+    .lb-shell { gap: 0.75rem; padding-top: 1rem; padding-bottom: 1rem; }
+    .lb-header { margin-bottom: 0.75rem; }
+    .lb-header img { width: 5rem; }
+    #lbWheelSub { display: none !important; }
+    #lbWheelHeading { margin-bottom: 0.75rem; }
+    .lb-wheel-stage { width: min(100%, 26rem, max(13rem, calc(100dvh - 19rem))); margin-bottom: 0.75rem; }
+    .lb-form { gap: 1rem; }
+  }
 </style>
 </head>
 <body class="min-h-dvh text-base-content">
 
-<div class="relative min-h-dvh w-full flex flex-col items-center justify-center gap-8 px-5 py-8 sm:px-8 overflow-hidden">
+<div class="lb-shell relative min-h-dvh w-full flex flex-col items-center justify-center gap-8 px-5 py-8 sm:px-8 overflow-hidden">
   <!-- Floral meadow background -->
   <div class="absolute inset-0 pointer-events-none overflow-hidden" id="lbMeadowDecor" aria-hidden="true"></div>
   <div class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
@@ -143,8 +159,8 @@
   </div>
 
   <!-- Content -->
-  <main class="relative z-10 w-full max-w-md sm:max-w-lg">
-    <header class="text-center mb-6">
+  <main class="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl">
+    <header class="lb-header text-center mb-6">
       <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
            alt="Love Boo" width="130" loading="eager" class="w-32 mx-auto">
       <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] opacity-85">Baby Expo 2026</p>
@@ -158,7 +174,7 @@
           <path d="M4 12.5L9.5 18L20 6" stroke="#006D68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <img id="lbPrizeImage" class="lb-prize-image size-40 sm:size-48 md:size-56 lg:size-64 object-contain mx-auto mb-4" alt="">
+      <img id="lbPrizeImage" class="lb-prize-image object-contain mx-auto mb-4" alt="">
       <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
       <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
@@ -168,7 +184,7 @@
     <section id="lbWheelPanel" class="text-center">
       <h1 id="lbWheelHeading" class="text-2xl sm:text-3xl font-extrabold mb-1">Spin to Win!</h1>
       <p id="lbWheelSub" class="text-sm opacity-80 mb-6">Sign up in seconds for a chance to win a prize.</p>
-      <div id="lbWheelStage" class="lb-wheel-stage relative aspect-square w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto mb-5">
+      <div id="lbWheelStage" class="lb-wheel-stage relative aspect-square mx-auto mb-5">
         <div id="lbWheelPointer" class="lb-wheel-pointer" aria-hidden="true"></div>
         <div class="lb-wheel" id="lbWheel" aria-hidden="true">
           <div class="lb-wheel-hub"></div>
@@ -182,7 +198,7 @@
          the same way (label above field, consistent gap) — deliberately
          not using multi-column grids, so it behaves identically and never
          feels cramped on any device from a phone up to a desktop. -->
-    <form id="LoveBooKlaviyoSignup" novalidate style="display: none;" class="flex flex-col gap-6">
+    <form id="LoveBooKlaviyoSignup" novalidate style="display: none;" class="lb-form flex flex-col gap-6 md:grid md:grid-cols-2 md:gap-x-5 md:gap-y-5">
       <div class="flex flex-col gap-2">
         <label for="LbFirst" class="text-sm font-semibold">First Name</label>
         <input type="text" id="LbFirst" placeholder="First name" required autocomplete="given-name"
@@ -229,7 +245,7 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-2 md:col-span-2">
         <span class="text-sm font-semibold">Are you a parent?</span>
         <div class="flex gap-6" role="radiogroup" aria-label="Are you a parent?">
           <label class="flex items-center gap-2 cursor-pointer">
@@ -247,7 +263,7 @@
            divider plus extra top margin, since a dense two-line legal
            paragraph landing right after a short radio row (same gap as
            every other field-to-field transition) read as cramped. -->
-      <div class="border-t border-secondary/40 pt-6 mt-2 flex flex-col gap-4">
+      <div class="border-t border-secondary/40 pt-5 flex flex-col gap-3 md:col-span-2">
         <label class="flex items-start gap-3 cursor-pointer text-sm leading-snug" for="LbTerms">
           <input type="checkbox" id="LbTerms" required class="checkbox checkbox-primary size-5 shrink-0 rounded-md mt-0.5">
           <span>I agree to the <a class="link link-primary font-semibold" href="https://loveboo.com/policies/terms-of-service" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a class="link link-primary font-semibold" href="https://loveboo.com/policies/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span>
@@ -258,7 +274,9 @@
         </p>
       </div>
 
-      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl">Sign Up</button>
+      <p id="lbFormError" class="text-error text-sm font-semibold text-center md:col-span-2" role="alert" hidden></p>
+
+      <button type="submit" id="lbSubmitBtn" class="btn btn-primary btn-block h-14 text-base rounded-2xl md:col-span-2">Sign Up</button>
     </form>
   </main>
 
@@ -273,7 +291,6 @@
   const KLAVIYO_ENDPOINT = `https://a.klaviyo.com/client/subscriptions/?company_id=${KLAVIYO_COMPANY_ID}`;
   const KLAVIYO_QUEUE_KEY = "lb_expo_pending_queue";
   const SUPABASE_QUEUE_KEY = "lb_expo_supabase_pending_queue";
-  const MAX_SEND_ATTEMPTS = 3;
 
   const sbClient = (typeof supabase !== "undefined" && typeof SUPABASE_URL !== "undefined")
     // The guest page must always act as the anonymous role. Without this, a
@@ -315,6 +332,13 @@
     clean = clean.replace(/[^\d]/g, '');
     // Strip leading zero common in GCC and UK inputs (e.g., 050 -> 50)
     clean = clean.replace(/^0+/, '');
+    // Phones often autofill the number WITH its country code ("971501234567")
+    // into the field next to the dial-code dropdown, which would otherwise
+    // double up to "+971971501234567".
+    const dial = selectedDialCode.replace(/\D/g, '');
+    if (clean.startsWith(dial) && clean.length >= dial.length + 8) {
+      clean = clean.slice(dial.length);
+    }
 
     if (clean.length > 5) {
       return selectedDialCode + clean;
@@ -322,73 +346,115 @@
     return null;
   }
 
-  // ---- Local backup queues -------------------------------------------
-  // Every registration is written to localStorage before we even try to
-  // send it, separately for Klaviyo and Supabase. If either request fails
-  // (blocked by an ad-blocker / privacy extension, flaky venue wifi, a bad
-  // response, etc.) that entry stays queued and is retried automatically in
-  // the background, so a busy booth kiosk never silently loses a guest's
-  // details even if one of the two destinations is temporarily unreachable.
-  function readQueue(queueKey) {
+  // ---- Delivery outbox ------------------------------------------------
+  // Standard "outbox" pattern. The moment a guest's result is known, the
+  // registration is written to this device's storage FIRST, then delivered
+  // to each destination independently in the background:
+  //   - Supabase is our system of record (what admin reads).
+  //   - Klaviyo is a downstream marketing sync.
+  // Neither blocks the other and neither blocks the guest's screen. An item
+  // stays in the outbox until BOTH destinations have accepted it (or Klaviyo
+  // has permanently rejected it), and is retried on a timer, on reconnect,
+  // and when the tab becomes visible again. `outbox` in memory is the truth;
+  // localStorage is a best-effort mirror (private modes can block it).
+  const OUTBOX_KEY = "lb_outbox_v2";
+  const REQUEST_TIMEOUT_MS = 10000;
+  let outbox = [];
+  const inflight = new Set();
+
+  function persistOutbox() {
+    try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); }
+    catch (e) { console.warn("Could not persist outbox:", e); }
+  }
+
+  function loadOutbox() {
+    try { outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; } catch (e) { outbox = []; }
+    // One-time migration of the two older queues so nobody queued before
+    // this update is lost.
     try {
-      return JSON.parse(localStorage.getItem(queueKey)) || [];
-    } catch (e) {
-      return [];
-    }
+      const oldK = JSON.parse(localStorage.getItem(KLAVIYO_QUEUE_KEY)) || [];
+      const oldS = JSON.parse(localStorage.getItem(SUPABASE_QUEUE_KEY)) || [];
+      oldK.forEach(function(it) {
+        const combined = !!(it.payload && it.payload.klaviyo);
+        outbox.push({
+          id: it.id,
+          klaviyo: combined ? it.payload.klaviyo : it.payload,
+          row: combined ? it.payload.row : null,
+          sb: !combined, kl: false
+        });
+      });
+      oldS.forEach(function(it) {
+        outbox.push({ id: it.id, klaviyo: null, row: it.payload, sb: false, kl: true });
+      });
+      if (oldK.length || oldS.length) {
+        localStorage.removeItem(KLAVIYO_QUEUE_KEY);
+        localStorage.removeItem(SUPABASE_QUEUE_KEY);
+        persistOutbox();
+      }
+    } catch (e) { /* nothing to migrate */ }
   }
 
-  function writeQueue(queueKey, queue) {
-    try {
-      localStorage.setItem(queueKey, JSON.stringify(queue));
-    } catch (e) {
-      console.warn("Could not persist local registration queue:", e);
-    }
-  }
-
-  function enqueue(queueKey, payload) {
-    const queue = readQueue(queueKey);
-    queue.push({
-      id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-      payload: payload,
-      createdAt: new Date().toISOString()
-    });
-    writeQueue(queueKey, queue);
-  }
-
-  function removeFromQueue(queueKey, id) {
-    writeQueue(queueKey, readQueue(queueKey).filter(item => item.id !== id));
-  }
-
-  // Single network attempt with a hard timeout so a dead connection can't
-  // hang the kiosk indefinitely. Resolves true only on a real 2xx from Klaviyo.
+  // One Klaviyo attempt. Returns "ok", "retry" (network/5xx/timeout/429:
+  // worth trying again) or "dead" (a 4xx that re-sending can never fix).
   async function sendKlaviyoOnce(payload) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const post = (body) => fetch(KLAVIYO_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "revision": "2024-05-15",
+        "Content-Type": "application/vnd.api+json",
+        "Accept": "application/vnd.api+json"
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
     try {
-      const res = await fetch(KLAVIYO_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "revision": "2024-05-15",
-          "Content-Type": "application/vnd.api+json",
-          "Accept": "application/vnd.api+json"
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-      return res.ok;
+      let res = await post(payload);
+      // Klaviyo rejects the WHOLE signup if the phone number is malformed.
+      // A bad phone must not cost us the guest, so retry once without it.
+      const attrs = payload.data.attributes.profile.data.attributes;
+      if (!res.ok && res.status >= 400 && res.status < 500 && res.status !== 429 && attrs.phone_number) {
+        console.warn("Klaviyo rejected signup (" + res.status + "); retrying without phone");
+        const { phone_number, ...rest } = attrs;
+        res = await post({
+          data: {
+            ...payload.data,
+            attributes: {
+              ...payload.data.attributes,
+              profile: { data: { type: "profile", attributes: rest } }
+            }
+          }
+        });
+      }
+      if (res.ok) return "ok";
+      const permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
+      return permanent ? "dead" : "retry";
     } catch (err) {
       console.warn("Klaviyo submit attempt failed:", err);
-      return false;
+      return "retry";
     } finally {
-      clearTimeout(timeout);
+      clearTimeout(timer);
     }
   }
 
-  // Single insert attempt into the Supabase `registrations` table.
+  // One Supabase insert attempt, with a hard timeout so a dead connection
+  // can't hang anything.
   async function sendSupabaseOnce(row) {
     if (!sbClient) return false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const { error } = await sbClient.from("registrations").insert({ ...row, klaviyo_synced: true });
+      // client_id makes retries idempotent (duplicate = silently ignored).
+      // If reliability.sql hasn't been applied yet, the column/constraint
+      // doesn't exist, so fall back to a plain insert instead of failing.
+      let { error } = await sbClient.from("registrations")
+        .upsert(row, { onConflict: "client_id", ignoreDuplicates: true })
+        .abortSignal(controller.signal);
+      if (error && /client_id|42P10|PGRST204/.test((error.code || "") + " " + (error.message || ""))) {
+        const { client_id, ...plain } = row;
+        ({ error } = await sbClient.from("registrations").insert(plain).abortSignal(controller.signal));
+      }
       if (error) {
         console.warn("Supabase insert failed:", error.message);
         return false;
@@ -397,45 +463,59 @@
     } catch (err) {
       console.warn("Supabase insert attempt failed:", err);
       return false;
-    }
-  }
-
-  async function sendWithRetry(sendFn, payload, attempts) {
-    for (let i = 0; i < attempts; i++) {
-      if (await sendFn(payload)) return true;
-      if (i < attempts - 1) {
-        await new Promise(r => setTimeout(r, 400 * (i + 1)));
-      }
-    }
-    return false;
-  }
-
-  let flushInFlight = false;
-  async function flushQueue() {
-    if (flushInFlight) return;
-    if (!navigator.onLine) return;
-    flushInFlight = true;
-    try {
-      for (const item of readQueue(KLAVIYO_QUEUE_KEY)) {
-        // New shape: { klaviyo, row }. Older queued items are the bare Klaviyo payload.
-        const isCombined = !!(item.payload && item.payload.klaviyo);
-        const klaviyoPayload = isCombined ? item.payload.klaviyo : item.payload;
-        if (await sendKlaviyoOnce(klaviyoPayload)) {
-          removeFromQueue(KLAVIYO_QUEUE_KEY, item.id);
-          // Only now is the guest confirmed in Klaviyo, so only now do they
-          // become visible in admin.
-          if (isCombined && !(await sendSupabaseOnce(item.payload.row))) {
-            enqueue(SUPABASE_QUEUE_KEY, item.payload.row);
-          }
-        }
-      }
-      for (const item of readQueue(SUPABASE_QUEUE_KEY)) {
-        if (await sendSupabaseOnce(item.payload)) removeFromQueue(SUPABASE_QUEUE_KEY, item.id);
-      }
     } finally {
-      flushInFlight = false;
+      clearTimeout(timer);
     }
   }
+
+  // Tries both destinations once, in parallel, for one outbox item.
+  async function deliver(id) {
+    if (inflight.has(id)) return;
+    const item = outbox.find(function(i) { return i.id === id; });
+    if (!item) return;
+    inflight.add(id);
+    try {
+      const results = await Promise.all([
+        (item.sb || !item.row) ? true : sendSupabaseOnce(item.row),
+        (item.kl || !item.klaviyo) ? "ok" : sendKlaviyoOnce(item.klaviyo)
+      ]);
+      if (results[0] === true) item.sb = true;
+      if (results[1] !== "retry") {
+        item.kl = true;
+        if (results[1] === "dead") console.warn("Klaviyo permanently rejected a signup; kept in Supabase only.");
+      }
+      if (item.sb && item.kl) {
+        outbox = outbox.filter(function(i) { return i.id !== id; });
+      }
+      persistOutbox();
+    } finally {
+      inflight.delete(id);
+    }
+  }
+
+  async function flushQueue() {
+    if (!navigator.onLine) return;
+    await Promise.all(outbox.slice().map(function(i) { return deliver(i.id); }));
+  }
+
+  // Called once per finished spin. Saves first, then sends in the
+  // background with a few quick retries; the timer/online/visibility
+  // flushes cover anything that still fails.
+  function queueRegistration(klaviyo, row) {
+    const id = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    outbox.push({ id: id, klaviyo: klaviyo, row: row, sb: false, kl: false, createdAt: new Date().toISOString() });
+    persistOutbox();
+    (async function() {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!outbox.some(function(i) { return i.id === id; })) return;
+        if (navigator.onLine) await deliver(id);
+        if (!outbox.some(function(i) { return i.id === id; })) return;
+        await new Promise(function(r) { setTimeout(r, 1500 * (attempt + 1)); });
+      }
+    })();
+  }
+
+  loadOutbox();
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function() {
@@ -448,11 +528,13 @@
   document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("lbYear").textContent = new Date().getFullYear();
     flushQueue();
-    setInterval(flushQueue, 20000);
+    setInterval(flushQueue, 15000);
+    document.addEventListener("visibilitychange", function() { if (!document.hidden) flushQueue(); });
     window.addEventListener("online", flushQueue);
 
     const form = document.getElementById("LoveBooKlaviyoSignup");
     const submitBtn = document.getElementById("lbSubmitBtn");
+    const formError = document.getElementById("lbFormError");
     const successView = document.getElementById("lbSuccessView");
     const successBadge = document.getElementById("lbSuccessBadge");
     const successTitle = document.getElementById("lbSuccessTitle");
@@ -500,6 +582,35 @@
         console.warn("Could not load prizes:", err);
         return [];
       }
+    }
+
+    // Slices are drawn equal-sized, but the landing spot is weighted by how
+    // much of each prize is left, so big-stock prizes come up most and a
+    // small-stock one (e.g. the 10-unit Mystery Gift) comes up rarely.
+    // Unlimited prizes weigh as much as the largest limited stock.
+    // "Try Again" gets TRY_AGAIN_SHARE of the total probability.
+    const TRY_AGAIN_SHARE = 0.25;
+
+    function pickWeightedIndex() {
+      const remaining = wheelSegments.map(function(seg) {
+        if (seg === TRY_AGAIN || seg.quantity == null) return null;
+        return Math.max(0, seg.quantity - (seg.given_count || 0));
+      });
+      const unlimitedWeight = Math.max(1, ...remaining.filter(function(r) { return r != null; }));
+      const weights = wheelSegments.map(function(seg, i) {
+        if (seg === TRY_AGAIN) return 0;
+        return remaining[i] == null ? unlimitedWeight : remaining[i];
+      });
+      const prizeTotal = weights.reduce(function(a, b) { return a + b; }, 0);
+      const tryAgainIdx = wheelSegments.indexOf(TRY_AGAIN);
+      weights[tryAgainIdx] = prizeTotal * TRY_AGAIN_SHARE / (1 - TRY_AGAIN_SHARE);
+
+      let roll = Math.random() * weights.reduce(function(a, b) { return a + b; }, 0);
+      for (let i = 0; i < weights.length; i++) {
+        roll -= weights[i];
+        if (roll < 0) return i;
+      }
+      return tryAgainIdx;
     }
 
     function setWheelSegments(prizes) {
@@ -734,59 +845,105 @@
       }
     }
 
+    // Asks the database to pick AND claim in one atomic step (reliability.sql).
+    // Returns null if that isn't available, in which case doSpin falls back to
+    // the in-browser weighted pick + claim_prize.
+    async function serverSpin() {
+      if (!sbClient) return null;
+      const controller = new AbortController();
+      const timer = setTimeout(function() { controller.abort(); }, 8000);
+      try {
+        const { data, error } = await sbClient.rpc("spin_wheel").abortSignal(controller.signal);
+        if (error || !data || !data.kind) return null;
+        return data;
+      } catch (err) {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
     // Runs exactly one spin. Used both for the guest's first tap and for
     // every subsequent "Spin Again" tap after a Try Again — nothing spins
     // automatically.
     async function doSpin() {
       showSpinning();
-
-      const targetIndex = Math.floor(Math.random() * wheelSegments.length);
       spinCount++;
-      await spinToIndex(targetIndex);
-      const seg = wheelSegments[targetIndex];
 
-      if (seg === TRY_AGAIN && spinCount < 2) {
+      const server = await serverSpin();
+      let targetIndex;
+      if (server && server.kind === "prize") {
+        targetIndex = wheelSegments.findIndex(function(s) { return s.id === server.id; });
+        if (targetIndex < 0) {
+          // Stock/prizes changed since the wheel was drawn; add it so the
+          // wheel can still land on what was actually won.
+          const current = wheelSegments.filter(function(s) { return s !== TRY_AGAIN; });
+          current.push({ id: server.id, name: server.name, image_url: server.image_url });
+          setWheelSegments(current);
+          layoutWheelLabels();
+          targetIndex = wheelSegments.length - 2;
+        }
+      } else if (server) {
+        targetIndex = wheelSegments.indexOf(TRY_AGAIN);
+      } else {
+        targetIndex = pickWeightedIndex();
+      }
+
+      const seg = wheelSegments[targetIndex];
+      const isFinal = !(seg === TRY_AGAIN && spinCount < 2);
+      let finalPrize = null;
+      let finalPrizeImage = null;
+      let recorded = false;
+
+      // Server path: the prize is already claimed, so save the registration
+      // NOW, before the animation, and the guest can't be lost mid-spin.
+      if (server) {
+        if (seg !== TRY_AGAIN) { finalPrize = seg.name; finalPrizeImage = seg.image_url; }
+        if (isFinal) { recordRegistration(finalPrize); recorded = true; }
+      }
+
+      await spinToIndex(targetIndex);
+
+      if (!isFinal) {
         spinStatus.textContent = "So close! One more spin...";
         await sleep(900);
         showReadyToSpin("Spin Again");
         return;
       }
 
-      let finalPrize = null;
-      let finalPrizeImage = null;
-
-      if (seg === TRY_AGAIN || !seg.id) {
-        // Landed on Try Again (out of retries), or the unlimited "Mystery
-        // Gift" placeholder used when nothing's configured in admin yet.
-        finalPrize = seg === TRY_AGAIN ? null : seg.name;
-        finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
-      } else {
-        // Atomically claim a real, tracked prize. If someone else just took
-        // the last unit at the same moment, this comes back false and we
-        // gracefully fall back to a no-prize outcome rather than promising
-        // something that's no longer available.
-        let claimed = false;
-        try {
-          const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
-          claimed = !error && data === true;
-        } catch (err) {
-          claimed = false;
-        }
-        if (claimed) {
-          finalPrize = seg.name;
-          finalPrizeImage = seg.image_url;
+      if (!server) {
+        if (seg === TRY_AGAIN || !seg.id) {
+          // Try Again (out of retries), or the unlimited "Mystery Gift"
+          // placeholder used when nothing's configured in admin yet.
+          finalPrize = seg === TRY_AGAIN ? null : seg.name;
+          finalPrizeImage = seg === TRY_AGAIN ? null : seg.image_url;
+        } else {
+          // Fallback path: atomically claim a tracked prize. If someone took
+          // the last unit meanwhile, fall back to a no-prize outcome.
+          let claimed = false;
+          try {
+            const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
+            claimed = !error && data === true;
+          } catch (err) {
+            claimed = false;
+          }
+          if (claimed) {
+            finalPrize = seg.name;
+            finalPrizeImage = seg.image_url;
+          }
         }
       }
 
       spinStatus.textContent = finalPrize ? "Landed on " + finalPrize + "!" : "No prize this time.";
+      if (!recorded) recordRegistration(finalPrize);
       await sleep(2200);
-      await finishRegistration(finalPrize, finalPrizeImage);
+      revealResult(finalPrize, finalPrizeImage);
     }
 
     // Sends the already-validated, already-spun registration to Klaviyo +
     // Supabase and shows the result. Split out from the form submit handler
     // because it now fires after the guest has tapped to spin, not before.
-    async function finishRegistration(finalPrize, finalPrizeImage) {
+    function recordRegistration(finalPrize) {
       const p = pendingRegistration;
 
       const customProperties = {
@@ -817,6 +974,8 @@
       };
 
       const supabaseRow = {
+        client_id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+          : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }),
         first_name: p.firstName,
         last_name: p.lastName || null,
         email: p.email,
@@ -831,22 +990,7 @@
         utm_content: p.utmParams.utm_content || null
       };
 
-      // Klaviyo is the source of truth for who counts as registered: the
-      // Supabase row (which admin reads) is only written once Klaviyo has
-      // confirmed the guest. If Klaviyo can't be reached, both are queued
-      // together and sent in that order when the connection is back.
-      const queueBoth = () => enqueue(KLAVIYO_QUEUE_KEY, { klaviyo: klaviyoPayload, row: supabaseRow });
-      if (!navigator.onLine) {
-        queueBoth();
-      } else if (await sendWithRetry(sendKlaviyoOnce, klaviyoPayload, MAX_SEND_ATTEMPTS)) {
-        if (!(await sendWithRetry(sendSupabaseOnce, supabaseRow, MAX_SEND_ATTEMPTS))) {
-          enqueue(SUPABASE_QUEUE_KEY, supabaseRow);
-        }
-      } else {
-        queueBoth();
-      }
-
-      revealResult(finalPrize, finalPrizeImage);
+      queueRegistration(klaviyoPayload, supabaseRow);
     }
 
     if (startBtn) {
@@ -879,19 +1023,17 @@
         const emailInput = document.getElementById("LbEmail");
         const termsInput = document.getElementById("LbTerms");
 
-        // Mobile manual validation check
-        if (!firstInput.value.trim()) {
-          firstInput.focus();
-          return;
-        }
-        if (!emailInput.value.trim() || !emailInput.value.includes('@')) {
-          emailInput.focus();
-          return;
-        }
-        if (!termsInput.checked) {
-          termsInput.focus();
-          return;
-        }
+        // Manual validation (the form is novalidate) with a visible message,
+        // so a tap on Sign Up never silently does nothing on a phone.
+        const fail = function(msg, input) {
+          formError.textContent = msg;
+          formError.hidden = false;
+          input.focus();
+        };
+        formError.hidden = true;
+        if (!firstInput.value.trim()) return fail("Please enter your first name.", firstInput);
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailInput.value.trim())) return fail("Please enter a valid email address.", emailInput);
+        if (!termsInput.checked) return fail("Please accept the Terms & Conditions to continue.", termsInput);
 
         submitBtn.disabled = true;
         submitBtn.textContent = "One sec...";
@@ -905,7 +1047,7 @@
         pendingRegistration = {
           firstName: firstInput.value.trim(),
           lastName: document.getElementById("LbLast").value.trim(),
-          email: emailInput.value.trim(),
+          email: emailInput.value.trim().toLowerCase(),
           fullPhone: formatMobilePhone(rawPhoneInput, countryCode),
           isParent: parentChecked ? parentChecked.value : "Yes",
           utmParams: getUrlParams()

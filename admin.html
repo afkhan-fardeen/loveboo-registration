@@ -15,10 +15,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="vendor/daisyui.css" rel="stylesheet" type="text/css">
+<script src="vendor/tailwind-browser.js"></script>
+<script defer src="vendor/alpine.min.js"></script>
+<script src="vendor/supabase.js"></script>
 <script src="supabase-config.js"></script>
 
 <style>
@@ -358,7 +358,16 @@
       async loadRegistrations() {
         this.loading = true;
         this.loadError = "";
-        const { data, error } = await sbClient.from("registrations").select("*").eq("klaviyo_synced", true).order("created_at", { ascending: false });
+        // PostgREST caps a single response at 1000 rows by default, so page
+        // through everything or a busy 3-day expo would silently truncate.
+        let data = [], error = null;
+        for (let from = 0; ; from += 1000) {
+          const res = await sbClient.from("registrations").select("*")
+            .order("created_at", { ascending: false }).order("id").range(from, from + 999);
+          if (res.error) { error = res.error; break; }
+          data = data.concat(res.data || []);
+          if (!res.data || res.data.length < 1000) break;
+        }
         this.loading = false;
         if (error) {
           console.error("Failed to load registrations:", error.message);
@@ -532,7 +541,7 @@
         realtimeSubscribed = true;
         sbClient.channel("registrations-changes")
           .on("postgres_changes", { event: "INSERT", schema: "public", table: "registrations" }, payload => {
-            if (payload.new.klaviyo_synced) this.rows = [payload.new].concat(this.rows);
+            this.rows = [payload.new].concat(this.rows);
           })
           .on("postgres_changes", { event: "UPDATE", schema: "public", table: "registrations" }, payload => {
             const idx = this.rows.findIndex(r => r.id === payload.new.id);
