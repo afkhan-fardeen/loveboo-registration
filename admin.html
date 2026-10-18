@@ -97,6 +97,7 @@
     </div>
     <div class="flex gap-2">
       <button type="button" class="btn btn-outline btn-primary btn-sm" @click="loadRegistrations()">Refresh</button>
+      <button type="button" class="btn btn-primary btn-sm" @click="openExport()">Export for Klaviyo</button>
       <button type="button" class="btn btn-outline btn-primary btn-sm" @click="downloadCsv()">Export CSV</button>
       <button type="button" class="btn btn-primary btn-sm" @click="signOut()">Sign Out</button>
     </div>
@@ -117,6 +118,37 @@
       <div class="stat-value text-primary" x-text="rows.filter(r => (r.is_parent || '').toLowerCase() === 'yes').length"></div>
     </div>
   </section>
+
+
+  <!-- Klaviyo export -->
+  <div x-show="exportOpen" x-cloak class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" @keydown.escape.window="exportOpen = false" @click.self="exportOpen = false">
+    <div class="bg-base-100 w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 max-h-[90dvh] overflow-auto">
+      <h2 class="text-lg font-extrabold mb-1">Export for Klaviyo</h2>
+      <p class="text-sm opacity-80 mb-4">Everyone who registered is included, whether or not they won. Upload the file in Klaviyo under <b>Lists &amp; Segments → your list → Add profiles → Import from CSV</b>, the columns are already named like Klaviyo's template.</p>
+
+      <div class="flex flex-col gap-2 mb-4">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" class="radio radio-primary" value="all" x-model="exportScope">
+          <span>All registrations <span class="opacity-70" x-text="'(' + rows.length + ')'"></span></span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" class="radio radio-primary" value="new" x-model="exportScope">
+          <span>New since last export <span class="opacity-70" x-text="'(' + exportRows('new').length + ')'"></span></span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" class="radio radio-primary" value="today" x-model="exportScope">
+          <span>Today only <span class="opacity-70" x-text="'(' + exportRows('today').length + ')'"></span></span>
+        </label>
+      </div>
+
+      <p class="text-xs opacity-70 mb-4">Follows Klaviyo's list import template. Every guest is marked <code>SUBSCRIBE</code> for email (and SMS when they gave a phone), with their sign-up time as the consent timestamp, because they accepted the terms and marketing consent on the form.</p>
+
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn btn-ghost" @click="exportOpen = false">Cancel</button>
+        <button type="button" class="btn btn-primary" :disabled="exportRows(exportScope).length === 0" @click="downloadKlaviyoCsv()">Download CSV</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Tabs -->
   <div role="tablist" class="tabs tabs-box bg-base-300/50 mb-4 w-fit">
@@ -310,6 +342,26 @@
     return [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase().includes(q);
   }
 
+  // CSV helpers. Values starting with = + - @ are prefixed so spreadsheet
+  // apps can't run them as formulas (skipped for email/phone, where a
+  // leading "+" is legitimate and must stay intact).
+  function csvCell(v, trusted) {
+    let t = v == null ? "" : String(v);
+    if (!trusted && /^[=+\-@\t\r]/.test(t)) t = "'" + t;
+    return '"' + t.replace(/"/g, '""') + '"';
+  }
+  function saveCsv(lines, filename) {
+    // BOM so Excel reads names/emoji as UTF-8.
+    const url = URL.createObjectURL(new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function adminApp() {
     return {
       view: "login", tab: "registrations",
@@ -318,6 +370,7 @@
       prizes: [], prizesLoading: false, prizesLoaded: false, prizesLoadError: "",
       prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
       toRemove: null,
+      exportOpen: false, exportScope: "new",
       edit: null, editName: "", editQty: "", editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
 
       get filtered() {
@@ -378,21 +431,60 @@
         this.rows = data || [];
       },
 
+      // ---- Klaviyo export -------------------------------------------
+      lastExportAt() {
+        try { return localStorage.getItem("lb_last_klaviyo_export") || ""; } catch (e) { return ""; }
+      },
+      exportRows(scope) {
+        if (scope === "new") {
+          const last = this.lastExportAt();
+          return last ? this.rows.filter(r => r.created_at > last) : this.rows;
+        }
+        if (scope === "today") {
+          const today = new Date().toDateString();
+          return this.rows.filter(r => new Date(r.created_at).toDateString() === today);
+        }
+        return this.rows;
+      },
+      openExport() {
+        // Default to "new" only when something was exported before.
+        this.exportScope = this.lastExportAt() ? "new" : "all";
+        this.exportOpen = true;
+      },
+      downloadKlaviyoCsv() {
+        const list = this.exportRows(this.exportScope);
+        if (!list.length) return;
+        // Header names follow Klaviyo's own "List Import Template" CSV. Only
+        // the columns we have data for are included; the rest of the template
+        // is optional. "Custom Property (X)" columns import as profile properties.
+        const headers = ["email", "phone number", "external id", "Email Marketing Consent", "Email Marketing Consent Timestamp", "SMS Marketing Consent", "SMS Marketing Consent Timestamp", "firstname", "lastname", "Custom Property (Prize)", "Custom Property (Is Parent)", "Custom Property (Event)", "Custom Property (Source)", "Custom Property (UTM Source)", "Custom Property (UTM Medium)", "Custom Property (UTM Campaign)"];
+        const ts = iso => new Date(iso).toISOString().slice(0, 19).replace("T", " ");
+        const csv = [headers.join(",")];
+        list.slice().reverse().forEach(r => {
+          const when = ts(r.created_at);
+          csv.push([
+            r.email, r.phone, r.client_id || r.id,
+            "SUBSCRIBE", when,
+            r.phone ? "SUBSCRIBE" : "", r.phone ? when : "",
+            r.first_name, r.last_name,
+            r.prize || "None", r.is_parent, "Dubai Baby Expo 2026", r.source,
+            r.utm_source, r.utm_medium, r.utm_campaign
+          ].map((v, i) => csvCell(v, i <= 2)).join(","));
+        });
+        saveCsv(csv, "loveboo-klaviyo-import-" + new Date().toISOString().slice(0, 10) + ".csv");
+        const newest = list.reduce((m, r) => r.created_at > m ? r.created_at : m, "");
+        try { localStorage.setItem("lb_last_klaviyo_export", newest); } catch (e) {}
+        this.exportOpen = false;
+      },
+
       downloadCsv() {
         const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
         const csv = [headers.join(",")];
         this.filtered.forEach(r => {
           csv.push([r.first_name, r.last_name, r.email, r.phone, r.is_parent, r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at]
-            .map(v => '"' + (v == null ? "" : String(v)).replace(/"/g, '""') + '"').join(","));
+            .map((v, i) => csvCell(v, i === 2 || i === 3)).join(","));
         });
-        const url = URL.createObjectURL(new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" }));
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        saveCsv(csv, "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv");
       },
 
       // ---- Wheel prizes ----

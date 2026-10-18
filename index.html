@@ -286,9 +286,6 @@
 </div>
 
 <script>
-  const KLAVIYO_COMPANY_ID = "SQtNNh";
-  const KLAVIYO_LIST_ID = "YhCSvv";
-  const KLAVIYO_ENDPOINT = `https://a.klaviyo.com/client/subscriptions/?company_id=${KLAVIYO_COMPANY_ID}`;
   const KLAVIYO_QUEUE_KEY = "lb_expo_pending_queue";
   const SUPABASE_QUEUE_KEY = "lb_expo_supabase_pending_queue";
 
@@ -348,15 +345,13 @@
 
   // ---- Delivery outbox ------------------------------------------------
   // Standard "outbox" pattern. The moment a guest's result is known, the
-  // registration is written to this device's storage FIRST, then delivered
-  // to each destination independently in the background:
-  //   - Supabase is our system of record (what admin reads).
-  //   - Klaviyo is a downstream marketing sync.
-  // Neither blocks the other and neither blocks the guest's screen. An item
-  // stays in the outbox until BOTH destinations have accepted it (or Klaviyo
-  // has permanently rejected it), and is retried on a timer, on reconnect,
-  // and when the tab becomes visible again. `outbox` in memory is the truth;
-  // localStorage is a best-effort mirror (private modes can block it).
+  // registration is written to this device's storage FIRST, then sent to
+  // Supabase (our system of record; admin reads it and exports the list to
+  // Klaviyo later) in the background. The guest never waits on the network.
+  // An item stays in the outbox until Supabase accepts it, and is retried on
+  // a timer, on reconnect, and when the tab becomes visible again. `outbox`
+  // in memory is the truth; localStorage is a best-effort mirror (private
+  // modes can block it).
   const OUTBOX_KEY = "lb_outbox_v2";
   const REQUEST_TIMEOUT_MS = 10000;
   let outbox = [];
@@ -367,75 +362,41 @@
     catch (e) { console.warn("Could not persist outbox:", e); }
   }
 
+  // Older versions queued Klaviyo payloads too. Recover every guest from
+  // those queues into plain Supabase rows so nobody is lost.
+  function rowFromKlaviyoPayload(payload) {
+    try {
+      const at = payload.data.attributes.profile.data.attributes;
+      const pr = at.properties || {};
+      return {
+        first_name: at.first_name || "", last_name: at.last_name || null, email: at.email,
+        phone: at.phone_number || null, is_parent: pr.is_parent || null,
+        source: pr.source || "baby_expo_2026", prize: pr.prize && pr.prize !== "None" ? pr.prize : null,
+        utm_source: pr.utm_source || null, utm_medium: pr.utm_medium || null,
+        utm_campaign: pr.utm_campaign || null, utm_term: pr.utm_term || null, utm_content: pr.utm_content || null
+      };
+    } catch (e) { return null; }
+  }
+
   function loadOutbox() {
     try { outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; } catch (e) { outbox = []; }
-    // One-time migration of the two older queues so nobody queued before
-    // this update is lost.
     try {
       const oldK = JSON.parse(localStorage.getItem(KLAVIYO_QUEUE_KEY)) || [];
       const oldS = JSON.parse(localStorage.getItem(SUPABASE_QUEUE_KEY)) || [];
       oldK.forEach(function(it) {
         const combined = !!(it.payload && it.payload.klaviyo);
-        outbox.push({
-          id: it.id,
-          klaviyo: combined ? it.payload.klaviyo : it.payload,
-          row: combined ? it.payload.row : null,
-          sb: !combined, kl: false
-        });
+        const row = combined ? it.payload.row : rowFromKlaviyoPayload(it.payload);
+        if (row) outbox.push({ id: it.id, row: row, sb: false });
       });
-      oldS.forEach(function(it) {
-        outbox.push({ id: it.id, klaviyo: null, row: it.payload, sb: false, kl: true });
-      });
+      oldS.forEach(function(it) { outbox.push({ id: it.id, row: it.payload, sb: false }); });
       if (oldK.length || oldS.length) {
         localStorage.removeItem(KLAVIYO_QUEUE_KEY);
         localStorage.removeItem(SUPABASE_QUEUE_KEY);
-        persistOutbox();
       }
     } catch (e) { /* nothing to migrate */ }
-  }
-
-  // One Klaviyo attempt. Returns "ok", "retry" (network/5xx/timeout/429:
-  // worth trying again) or "dead" (a 4xx that re-sending can never fix).
-  async function sendKlaviyoOnce(payload) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    const post = (body) => fetch(KLAVIYO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "revision": "2024-05-15",
-        "Content-Type": "application/vnd.api+json",
-        "Accept": "application/vnd.api+json"
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-    try {
-      let res = await post(payload);
-      // Klaviyo rejects the WHOLE signup if the phone number is malformed.
-      // A bad phone must not cost us the guest, so retry once without it.
-      const attrs = payload.data.attributes.profile.data.attributes;
-      if (!res.ok && res.status >= 400 && res.status < 500 && res.status !== 429 && attrs.phone_number) {
-        console.warn("Klaviyo rejected signup (" + res.status + "); retrying without phone");
-        const { phone_number, ...rest } = attrs;
-        res = await post({
-          data: {
-            ...payload.data,
-            attributes: {
-              ...payload.data.attributes,
-              profile: { data: { type: "profile", attributes: rest } }
-            }
-          }
-        });
-      }
-      if (res.ok) return "ok";
-      const permanent = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
-      return permanent ? "dead" : "retry";
-    } catch (err) {
-      console.warn("Klaviyo submit attempt failed:", err);
-      return "retry";
-    } finally {
-      clearTimeout(timer);
-    }
+    // Items from the previous outbox shape may still carry Klaviyo fields.
+    outbox = outbox.filter(function(i) { return i.row && !i.sb; });
+    persistOutbox();
   }
 
   // One Supabase insert attempt, with a hard timeout so a dead connection
@@ -468,26 +429,16 @@
     }
   }
 
-  // Tries both destinations once, in parallel, for one outbox item.
   async function deliver(id) {
     if (inflight.has(id)) return;
     const item = outbox.find(function(i) { return i.id === id; });
     if (!item) return;
     inflight.add(id);
     try {
-      const results = await Promise.all([
-        (item.sb || !item.row) ? true : sendSupabaseOnce(item.row),
-        (item.kl || !item.klaviyo) ? "ok" : sendKlaviyoOnce(item.klaviyo)
-      ]);
-      if (results[0] === true) item.sb = true;
-      if (results[1] !== "retry") {
-        item.kl = true;
-        if (results[1] === "dead") console.warn("Klaviyo permanently rejected a signup; kept in Supabase only.");
-      }
-      if (item.sb && item.kl) {
+      if (await sendSupabaseOnce(item.row)) {
         outbox = outbox.filter(function(i) { return i.id !== id; });
+        persistOutbox();
       }
-      persistOutbox();
     } finally {
       inflight.delete(id);
     }
@@ -501,12 +452,12 @@
   // Called once per finished spin. Saves first, then sends in the
   // background with a few quick retries; the timer/online/visibility
   // flushes cover anything that still fails.
-  function queueRegistration(klaviyo, row) {
+  function queueRegistration(row) {
     const id = Date.now() + "_" + Math.random().toString(36).slice(2, 8);
-    outbox.push({ id: id, klaviyo: klaviyo, row: row, sb: false, kl: false, createdAt: new Date().toISOString() });
+    outbox.push({ id: id, row: row, sb: false, createdAt: new Date().toISOString() });
     persistOutbox();
     (async function() {
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 4; attempt++) {
         if (!outbox.some(function(i) { return i.id === id; })) return;
         if (navigator.onLine) await deliver(id);
         if (!outbox.some(function(i) { return i.id === id; })) return;
@@ -940,38 +891,11 @@
       revealResult(finalPrize, finalPrizeImage);
     }
 
-    // Sends the already-validated, already-spun registration to Klaviyo +
-    // Supabase and shows the result. Split out from the form submit handler
+    // Builds the already-validated, already-spun registration and hands it to the
+    // outbox. Split out from the form submit handler
     // because it now fires after the guest has tapped to spin, not before.
     function recordRegistration(finalPrize) {
       const p = pendingRegistration;
-
-      const customProperties = {
-        is_parent: p.isParent,
-        event: "Dubai Baby Expo 2026",
-        source: p.utmParams.utm_source || "baby_expo_2026",
-        prize: finalPrize || "None",
-        ...p.utmParams
-      };
-
-      const profileAttributes = {
-        email: p.email,
-        first_name: p.firstName,
-        properties: customProperties
-      };
-      if (p.lastName) profileAttributes.last_name = p.lastName;
-      if (p.fullPhone) profileAttributes.phone_number = p.fullPhone;
-
-      const klaviyoPayload = {
-        data: {
-          type: "subscription",
-          attributes: {
-            custom_source: p.utmParams.utm_campaign || p.utmParams.utm_source || "Dubai Baby Expo 2026",
-            profile: { data: { type: "profile", attributes: profileAttributes } }
-          },
-          relationships: { list: { data: { type: "list", id: KLAVIYO_LIST_ID } } }
-        }
-      };
 
       const supabaseRow = {
         client_id: (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
@@ -990,7 +914,7 @@
         utm_content: p.utmParams.utm_content || null
       };
 
-      queueRegistration(klaviyoPayload, supabaseRow);
+      queueRegistration(supabaseRow);
     }
 
     if (startBtn) {
@@ -1043,7 +967,7 @@
         const parentChecked = document.querySelector('input[name="parent_status"]:checked');
 
         // Held onto until the guest actually taps to spin — nothing is sent
-        // to Klaviyo/Supabase yet, since the prize isn't known until then.
+        // to Supabase yet, since the prize isn't known until then.
         pendingRegistration = {
           firstName: firstInput.value.trim(),
           lastName: document.getElementById("LbLast").value.trim(),

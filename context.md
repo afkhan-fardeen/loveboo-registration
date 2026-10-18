@@ -5,7 +5,7 @@
 Last updated: 2026-10-18
 
 ## What this is
-Registration + spin-to-win for the Love Boo booth at Dubai Baby Expo 2026. Plain static site (HTML/CSS/JS, no framework, no build step), deployed on Vercel from GitHub `main` (auto-deploy on push). Backend: Supabase (DB, Auth, Storage, Realtime). Marketing list: Klaviyo.
+Registration + spin-to-win for the Love Boo booth at Dubai Baby Expo 2026. Plain static site (HTML/CSS/JS, no framework, no build step), deployed on Vercel from GitHub `main` (auto-deploy on push). Backend: Supabase (DB, Auth, Storage, Realtime). Marketing list: Klaviyo (fed by CSV export from admin, not live).
 
 ## Files
 | File | Purpose |
@@ -15,7 +15,7 @@ Registration + spin-to-win for the Love Boo booth at Dubai Baby Expo 2026. Plain
 | `wheel.html` | Retired. Redirects to `/`. |
 | `supabase-config.js` | Supabase URL + anon key (public; protected by RLS). Never put the service-role key here. |
 | `vendor/` | Self-hosted third-party JS/CSS used by index.html. |
-| `sw.js` | Service worker, app-shell cache only (`CACHE_VERSION` now v11 — bump it when shipping shell changes). Never touches POSTs / Supabase / Klaviyo calls. |
+| `sw.js` | Service worker: network-first shell, cache-first `/vendor/`, offline fallback to `/` (`CACHE_VERSION` now v13 — bump it when shipping shell changes). Never touches POSTs / Supabase calls. |
 | `manifest.json`, `icons/`, `favicon.png` | PWA bits. |
 | `vercel.json` | Clean URLs, cache headers, noindex on admin/wheel. |
 | `supabase/klaviyo-gated-admin.sql` | Migration (untracked in git as of this writing): adds `registrations.klaviyo_synced` and an admin UPDATE policy on `prizes`. |
@@ -33,16 +33,20 @@ Note: the `prizes` table, `claim_prize` RPC and other RLS policies were created 
 7. The animation lands on the chosen slice (with a small random jitter inside the slice); the outcome is decided *before* the spin animation starts.
 
 ## Guest flow & data writes
-- Form fields: first name, last name (optional), email, phone + country code (optional), parent Yes/No, terms checkbox. Duplicates are intentionally allowed (no dedup — user's decision).
-- Nothing is sent until the spin is resolved. Then `recordRegistration()` → `queueRegistration()` (**outbox pattern**):
-  1. The registration is written to the outbox (memory + localStorage `lb_outbox_v2`) *before* any network call and before the reveal screen; the guest sees the result immediately, delivery happens in the background.
-  2. **Supabase** (system of record, admin reads it) and **Klaviyo** (list `YhCSvv`, company `SQtNNh`) are delivered independently and in parallel; one failing never blocks the other. 10s timeout on each request.
-  3. Item stays in the outbox until both accepted. Retried: 3 quick attempts, every 15s, on `online`, and on tab becoming visible. Klaviyo 4xx (except 408/429) = permanent ("dead"): dropped from Klaviyo retry, kept in Supabase. On a Klaviyo 4xx with a phone, it retries once without the phone.
-  4. Admin shows ALL rows (the old `klaviyo_synced` gate was removed; column is now unused, defaults false). Admin loads in pages of 1000 (PostgREST row cap).
-  5. Old queues (`lb_expo_pending_queue`, `lb_expo_supabase_pending_queue`) are migrated into the outbox on load.
-  - Validation: visible inline error (`#lbFormError`) for name / email format / terms; email lowercased.
-  - Vendor libs (supabase, tailwind browser, daisyUI, anime, confetti) are self-hosted in `vendor/` and in the SW shell cache, so the page works if a CDN is blocked or the venue wifi is bad. `admin.html` still loads from CDNs.
-- Stored in `registrations`: name, email, phone, is_parent, source, `prize` (null if none), UTM fields, `klaviyo_synced`, `created_at`.
+- Form fields: first name, last name (optional), email, phone + country code (optional), parent Yes/No, terms checkbox (also the marketing consent). Duplicates are intentionally allowed (no dedup — user's decision).
+- **Klaviyo is NOT called from the guest page anymore.** Everyone is stored in Supabase only; the list is exported from admin and imported into Klaviyo later.
+- Nothing is sent until the spin is resolved. Then `recordRegistration()` → `queueRegistration(row)` (**outbox pattern**):
+  1. Written to the outbox (memory + localStorage `lb_outbox_v2`) *before* any network call and before the reveal; the guest sees the result immediately.
+  2. Sent to Supabase in the background (10s timeout; 4 quick attempts, then every 15s, on `online`, and when the tab becomes visible) until accepted. Old Klaviyo-era queues (`lb_expo_pending_queue`, `lb_expo_supabase_pending_queue`) are migrated into plain Supabase rows on load.
+  3. Each row has a `client_id` (uuid) → upsert with ignoreDuplicates, so retries never duplicate (falls back to plain insert until `supabase/reliability.sql` is applied).
+- Stored in `registrations`: name, email, phone, is_parent, source, `prize` (null if none), UTM fields, `client_id`, `created_at`. `klaviyo_synced` is legacy/unused.
+- Validation: visible inline error (`#lbFormError`) for name / email format / terms; email lowercased; phone normalised to E.164 (dial code not doubled).
+- Vendor libs (supabase, tailwind browser, daisyUI, anime, confetti, alpine) are self-hosted in `vendor/` and cached by the SW.
+
+## Klaviyo export (admin → "Export for Klaviyo")
+- Modal with scope: All / New since last export (remembered in the admin browser's localStorage `lb_last_klaviyo_export`) / Today. Everyone is included regardless of prize.
+- Format follows Klaviyo's own template (`List Import Template 2026 10 18 0330.csv` in the repo root): `email, phone number, external id (client_id), Email Marketing Consent=SUBSCRIBE + timestamp, SMS Marketing Consent=SUBSCRIBE + timestamp (only if phone), firstname, lastname, Custom Property (Prize / Is Parent / Event / Source / UTM Source / UTM Medium / UTM Campaign)`. Timestamp = registration time, UTC `YYYY-MM-DD HH:mm:ss`. UTF-8 BOM, CSV-formula-injection guard on text cells (not email/phone/id).
+- Import in Klaviyo: Lists & Segments → list → Add profiles → Import from CSV; map columns; confirm the consent step. Plain "Export CSV" still exists for a general dump.
 
 ## Supabase
 - Tables: `registrations`, `prizes` (`id, name, image_url, image_path, quantity, given_count, active, sort_order, created_at`). Storage bucket: `prize-images` (public).
@@ -73,7 +77,8 @@ Note: the `prizes` table, `claim_prize` RPC and other RLS policies were created 
 - `admin.html` now also uses self-hosted `vendor/` libs (incl. `alpine.min.js`).
 
 ## Still open
-- Klaviyo sync is still done from the guest's browser (outbox). Moving it to a server-side job (Edge Function / DB webhook) needs a Klaviyo **private** API key — not set up.
+- Klaviyo import is manual (CSV). A live server-side sync would need a Klaviyo **private** API key — not set up.
 - Tailwind still runs as the browser runtime (self-hosted); precompiling would need a build step, which the project deliberately avoids.
 - Dashboard tasks: enable Supabase backups/PITR; real-device test (iPhone, Android, tablet, laptop).
 - 2026-10-18 — Added `supabase/reliability.sql` (client_id, index, spin_wheel RPC), server-side spin with fallback, idempotent upsert, admin vendored, SW cache v12.
+- 2026-10-18 — Removed Klaviyo from the guest page (Supabase-only; the earlier Klaviyo-decoupling entries above are historical); added admin "Export for Klaviyo" CSV (all / new since last / today, matches Klaviyo's List Import Template); SW v13 (cache-first vendor, offline fallback); manifest shortcuts/categories/description.

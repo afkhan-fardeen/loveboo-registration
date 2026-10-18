@@ -1,7 +1,7 @@
 {
   "name": "Love Boo | Baby Expo Registration",
   "short_name": "Love Boo Expo",
-  "description": "Register for Love Boo at Dubai Baby Expo 2026 and collect your gift bag at our booth.",
+  "description": "Register for Love Boo at Dubai Baby Expo 2026, spin the wheel and collect your gift at our booth.",
   "start_url": "/",
   "scope": "/",
   "id": "/",
@@ -27,6 +27,40 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "lifestyle",
+    "shopping"
+  ],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "shortcuts": [
+    {
+      "name": "Register & Spin",
+      "short_name": "Register",
+      "url": "/",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "short_name": "Admin",
+      "url": "/admin.html",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
