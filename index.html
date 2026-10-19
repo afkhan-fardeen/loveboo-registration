@@ -406,16 +406,18 @@
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      // client_id makes retries idempotent (duplicate = silently ignored).
-      // If reliability.sql hasn't been applied yet, the column/constraint
-      // doesn't exist, so fall back to a plain insert instead of failing.
-      let { error } = await sbClient.from("registrations")
-        .upsert(row, { onConflict: "client_id", ignoreDuplicates: true })
-        .abortSignal(controller.signal);
-      if (error && /client_id|42P10|PGRST204/.test((error.code || "") + " " + (error.message || ""))) {
+      // A plain insert: guests may only INSERT into registrations (no SELECT),
+      // which rules out upsert / ON CONFLICT (it fails with 42501).
+      // client_id has a unique index, so a retry after a lost response comes
+      // back as 23505 (duplicate); that means it is already saved, so it counts
+      // as delivered. If reliability.sql isn't applied the column doesn't
+      // exist (PGRST204 / 42703), so retry without it.
+      let { error } = await sbClient.from("registrations").insert(row).abortSignal(controller.signal);
+      if (error && /PGRST204|42703/.test((error.code || "") + " " + (error.message || ""))) {
         const { client_id, ...plain } = row;
         ({ error } = await sbClient.from("registrations").insert(plain).abortSignal(controller.signal));
       }
+      if (error && error.code === "23505") error = null;
       if (error) {
         console.warn("Supabase insert failed:", error.message);
         return false;
