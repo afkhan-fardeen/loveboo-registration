@@ -178,6 +178,7 @@
       <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
       <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
+      <button type="button" id="lbBackBtn" class="btn btn-ghost btn-sm mt-6 opacity-70">&#8635; Back to start</button>
     </section>
 
     <!-- Landing / spin panel (one wheel used for both idle preview and live spin) -->
@@ -502,6 +503,10 @@
     const wheelPointer = document.getElementById("lbWheelPointer");
     const spinStatus = document.getElementById("lbSpinStatus");
     const startBtn = document.getElementById("lbStartBtn");
+    // Reloading gives the next guest a clean start and fresh prize stock. The
+    // guest's registration is already saved (or queued in the outbox), so
+    // nothing is lost.
+    document.getElementById("lbBackBtn").addEventListener("click", function() { window.location.reload(); });
 
     // ---- Wheel building --------------------------------------------------
     // Works identically no matter who's looking at it or how many other
@@ -773,7 +778,7 @@
 
       if (prize) {
         successTitle.textContent = "You won: " + prize + "!";
-        successMessage.textContent = "Show this screen at our booth to collect your gift.";
+        successMessage.textContent = "Show this screen at our booth, or show the email we've sent you, to collect your gift.";
       } else {
         successTitle.textContent = "Thanks for playing!";
         successMessage.textContent = "You're registered — no prize this time, but keep an eye out for future giveaways.";
