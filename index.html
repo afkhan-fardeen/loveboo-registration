@@ -125,11 +125,13 @@
   @media (max-height: 820px) {
     .lb-shell { gap: 0.75rem; padding-top: 1rem; padding-bottom: 1rem; }
     .lb-header { margin-bottom: 0.75rem; }
-    .lb-header img { width: 5rem; }
     #lbWheelSub { display: none !important; }
     #lbWheelHeading { margin-bottom: 0.75rem; }
     .lb-wheel-stage { width: min(100%, 26rem, max(13rem, calc(100dvh - 19rem))); margin-bottom: 0.75rem; }
     .lb-form { gap: 1.5rem; }
+    /* Header logo: nearly edge to edge on phones, capped on larger screens. */
+    .lb-header img.lb-logo { display: block; width: calc(100% + 1.5rem); max-width: none; height: auto; margin: -1.25rem -0.75rem; }
+    @media (min-width: 640px) { .lb-header img.lb-logo { width: 100%; max-width: 32rem; margin: -1.25rem auto; } }
   }
 </style>
 </head>
@@ -162,7 +164,7 @@
   <main class="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl">
     <header class="lb-header text-center mb-6">
       <img id="lbHeaderLogo" src="logo-header.png" alt="Love Boo x Baby &amp; Kids Expo Dubai" width="600" height="200"
-           loading="eager" class="w-full max-w-[22rem] sm:max-w-md mx-auto -my-4">
+           loading="eager" class="lb-logo">
     </header>
 
     <!-- Success / prize reveal -->
@@ -177,7 +179,6 @@
       <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
       <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
-      <button type="button" id="lbBackBtn" class="btn btn-ghost btn-sm mt-6 opacity-70">&#8635; Back to start</button>
     </section>
 
     <!-- Landing / spin panel (one wheel used for both idle preview and live spin) -->
@@ -502,10 +503,6 @@
     const wheelPointer = document.getElementById("lbWheelPointer");
     const spinStatus = document.getElementById("lbSpinStatus");
     const startBtn = document.getElementById("lbStartBtn");
-    // Reloading gives the next guest a clean start and fresh prize stock. The
-    // guest's registration is already saved (or queued in the outbox), so
-    // nothing is lost.
-    document.getElementById("lbBackBtn").addEventListener("click", function() { window.location.reload(); });
 
     // ---- Wheel building --------------------------------------------------
     // Works identically no matter who's looking at it or how many other
