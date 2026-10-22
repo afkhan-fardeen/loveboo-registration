@@ -19,7 +19,7 @@ Registration + spin-to-win for the Love Boo booth at **Dubai Baby Expo 2026** (3
 | Stock-weighted odds, Mystery Gift = 10 | Live (browser-side pick + `claim_prize`). |
 | Server-side spin (`spin_wheel`) + `client_id` duplicate protection | Code is live and falls back safely, but **only active after `supabase/reliability.sql` is run in the Supabase SQL Editor** (not confirmed run). |
 | Admin dashboard (registrations, prizes, Klaviyo export) | Live. |
-| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v17`. |
+| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v18`. |
 | Klaviyo | Manual CSV import only. |
 | Real-device test (iPhone, Android, tablet, laptop) | **Not done yet.** |
 | Supabase backups | **To enable** in the dashboard before the event. |
@@ -92,4 +92,5 @@ The `prizes` table, `claim_prize` RPC and the RLS policies were created directly
 - 2026-10-18 — Klaviyo removed from the guest page (Supabase-only); admin "Export for Klaviyo" in Klaviyo's import format; PWA update (SW v13, manifest shortcuts). Commits `dab8b06`, `8a71642`.
 - 2026-10-19 — Rewrote this file as a clean current-state document.
 - 2026-10-19 — Fixed signups not saving (upsert is denied for guests; now a plain insert, duplicate = delivered). Icons/favicon regenerated from `ASSETS/` (LB monogram on cream). SW v15. Guest thank-you email is sent by the ops portal (see its CONTEXT.md) via a `registration_email_to_ops` trigger on `registrations`.
-- 2026-10-22 — Added `/join` (same `index.html`, rewrite in `vercel.json`): sign-up form only, then shows discount code HELLO20 + Shop now; saved with source `baby_expo_2026_qr`, no prize. Use either the spin page (`/`) or `/join` at the event. Header uses `lockup.png` (Love Boo x Baby & Kids Expo). QR image: `ASSETS/loveboo-expo-qr.png|svg`. SW v17.
+- 2026-10-22 — Added `/join` (same `index.html`, rewrite in `vercel.json`): sign-up form only, then "Thank you, check your email for your discount code" (the code is only in the email); saved with source `baby_expo_2026_qr`, no prize. Use either the spin page (`/`) or `/join` at the event. Header uses `lockup.png` (Love Boo x Baby & Kids Expo). QR image: `ASSETS/loveboo-expo-qr.png|svg`. SW v17.
+- 2026-10-22 — Added `/qr`: booth screen showing `qr.svg` (replace that file to change the QR; it should open `/join`). SW v18.

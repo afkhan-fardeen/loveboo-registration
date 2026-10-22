@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Love Boo | Scan to sign up</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="favicon.png">
+<meta name="theme-color" content="#FBF9F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  /* The booth screen: a QR code that opens /join. To change the code, replace qr.svg. */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(16px, 3.5vh, 32px);
+    padding: 24px; text-align: center; background: #FBF9F1; color: #005151;
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .lockup { width: min(78vw, 420px); height: auto; }
+  h1 { margin: 0; font-size: clamp(24px, 4.2vh, 40px); font-weight: 800; line-height: 1.2; }
+  p { margin: 0; font-size: clamp(15px, 2.4vh, 20px); opacity: .8; }
+  .qr { width: min(66vw, 46vh, 460px); height: auto; padding: 14px; background: #fff; border-radius: 24px; box-shadow: 0 6px 28px rgba(0, 81, 81, .12); }
+</style>
+</head>
+<body>
+  <img class="lockup" src="lockup.png" alt="Love Boo x Baby &amp; Kids Expo Dubai">
+  <h1>Scan to sign up &amp; get your discount code</h1>
+  <img class="qr" src="qr.svg" alt="QR code: sign up for Love Boo">
+  <p>Point your phone camera at the code.</p>
+</body>
+</html>

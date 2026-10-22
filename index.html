@@ -177,12 +177,6 @@
       <img id="lbPrizeImage" class="lb-prize-image object-contain mx-auto mb-4" alt="">
       <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
-      <div id="lbCodeBox" hidden class="mx-auto my-5 max-w-xs rounded-2xl border-2 border-dashed border-primary bg-base-100 px-6 py-5">
-        <p class="text-xs font-bold uppercase tracking-[0.14em] opacity-70">Your discount code</p>
-        <p id="lbCodeText" class="mt-1 text-3xl sm:text-4xl font-extrabold tracking-[0.12em] text-primary select-all"></p>
-        <button type="button" id="lbCopyBtn" class="btn btn-outline btn-primary btn-sm mt-3">Copy code</button>
-      </div>
-      <a id="lbShopBtn" hidden href="https://loveboo.com" class="btn btn-primary mt-2 rounded-2xl px-8">Shop now</a>
       <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
       <button type="button" id="lbBackBtn" class="btn btn-ghost btn-sm mt-6 opacity-70">&#8635; Back to start</button>
     </section>
@@ -718,10 +712,9 @@
     let spinCount = 0;
 
     // /join (the QR code's page): same sign-up form, no wheel. The guest gets a
-    // discount code on screen, and ops emails it to them (it recognises these
+    // "check your email" screen, and ops emails them the discount code (it recognises these
     // registrations by their "_qr" source).
     const QR_MODE = window.location.pathname.replace(/\/+$/, "") === "/join";
-    const QR_CODE = "HELLO20";
     const QR_SOURCE = "baby_expo_2026_qr";
 
     function showLanding() {
@@ -782,11 +775,8 @@
       form.style.display = "none";
       prizeImage.classList.remove("visible");
       successBadge.style.display = "flex";
-      successTitle.textContent = "You're in! Here's your code";
-      successMessage.textContent = "Valid for 2 weeks. Use it at checkout on loveboo.com. We've also emailed it to you.";
-      document.getElementById("lbCodeText").textContent = QR_CODE;
-      document.getElementById("lbCodeBox").hidden = false;
-      document.getElementById("lbShopBtn").hidden = false;
+      successTitle.textContent = "Thank you for signing up!";
+      successMessage.textContent = "Check your email for your discount code.";
       successEmail.textContent = pendingRegistration ? "Sent to " + pendingRegistration.email : "";
       successView.style.display = "block";
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -970,11 +960,6 @@
       logo.className = "w-72 sm:w-96 max-w-full mx-auto";
       document.getElementById("lbHeaderTag").hidden = true;
       document.title = "Get your Love Boo code";
-      document.getElementById("lbCopyBtn").addEventListener("click", function(e) {
-        const btn = e.currentTarget;
-        const done = function() { btn.textContent = "Copied!"; setTimeout(function() { btn.textContent = "Copy code"; }, 2000); };
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(QR_CODE).then(done, function() {});
-      });
       showFormView();
       submitBtn.textContent = "Get My Code";
       const intro = document.createElement("p");
