@@ -129,7 +129,7 @@
     #lbWheelSub { display: none !important; }
     #lbWheelHeading { margin-bottom: 0.75rem; }
     .lb-wheel-stage { width: min(100%, 26rem, max(13rem, calc(100dvh - 19rem))); margin-bottom: 0.75rem; }
-    .lb-form { gap: 1rem; }
+    .lb-form { gap: 1.5rem; }
   }
 </style>
 </head>
@@ -162,7 +162,7 @@
   <main class="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl">
     <header class="lb-header text-center mb-6">
       <img id="lbHeaderLogo" src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
-           alt="Love Boo" width="130" loading="eager" class="w-44 sm:w-40 mx-auto">
+           alt="Love Boo" width="130" loading="eager" class="w-56 sm:w-48 mx-auto">
       <p id="lbHeaderTag" class="mt-2 text-xs font-bold uppercase tracking-[0.12em] opacity-85">Baby Expo 2026</p>
     </header>
 
@@ -246,7 +246,7 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-3 md:col-span-2 mt-4 mb-4">
+      <div class="flex flex-col gap-3 md:col-span-2 mt-2 mb-2">
         <span class="text-sm font-semibold">Are you a parent?</span>
         <div class="flex gap-6" role="radiogroup" aria-label="Are you a parent?">
           <label class="flex items-center gap-2 cursor-pointer">
@@ -736,7 +736,9 @@
       wheelPanel.style.display = "none";
       successView.style.display = "none";
       form.reset();
-      form.style.display = "block";
+      // Empty, not "block": the form is a flex column (grid on desktop) and an inline
+      // display:block would switch off its gap.
+      form.style.display = "";
       submitBtn.disabled = false;
       submitBtn.textContent = QR_MODE ? "Get My Code" : "Sign Up";
       const firstInput = document.getElementById("LbFirst");
@@ -954,16 +956,22 @@
 
     if (QR_MODE) {
       const logo = document.getElementById("lbHeaderLogo");
-      logo.src = "/lockup.png";
-      logo.alt = "Love Boo x Baby & Kids Expo Dubai";
+      // Love Boo above the expo logo, so each one is large on a phone.
+      logo.src = "/logo-lb.png";
+      logo.alt = "Love Boo";
       logo.removeAttribute("width");
-      logo.className = "w-full max-w-[22rem] sm:max-w-md mx-auto";
+      logo.className = "w-64 sm:w-72 max-w-full mx-auto";
+      const expo = document.createElement("img");
+      expo.src = "/logo-expo.png";
+      expo.alt = "Baby & Kids Expo Dubai";
+      expo.className = "w-44 sm:w-52 max-w-full mx-auto mt-4";
+      logo.insertAdjacentElement("afterend", expo);
       document.getElementById("lbHeaderTag").hidden = true;
       document.title = "Get your Love Boo code";
       showFormView();
       submitBtn.textContent = "Get My Code";
       const intro = document.createElement("p");
-      intro.className = "text-center text-sm opacity-80 mb-4";
+      intro.className = "text-center text-sm opacity-80 md:col-span-2";
       intro.textContent = "Sign up in seconds and we'll email you a Love Boo discount code.";
       form.insertBefore(intro, form.firstChild);
     } else {
