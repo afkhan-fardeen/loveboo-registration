@@ -93,4 +93,4 @@ The `prizes` table, `claim_prize` RPC and the RLS policies were created directly
 - 2026-10-19 — Rewrote this file as a clean current-state document.
 - 2026-10-19 — Fixed signups not saving (upsert is denied for guests; now a plain insert, duplicate = delivered). Icons/favicon regenerated from `ASSETS/` (LB monogram on cream). SW v15. Guest thank-you email is sent by the ops portal (see its CONTEXT.md) via a `registration_email_to_ops` trigger on `registrations`.
 - 2026-10-22 — Added `/join` (same `index.html`, rewrite in `vercel.json`): sign-up form only, then "Thank you, check your email for your discount code" (the code is only in the email); saved with source `baby_expo_2026_qr`, no prize. Use either the spin page (`/`) or `/join` at the event. Header uses `lockup.png` (Love Boo x Baby & Kids Expo). QR image: `ASSETS/loveboo-expo-qr.png|svg`. SW v17.
-- 2026-10-22 — Added `/qr`: booth screen showing `qr.svg` (replace that file to change the QR; it should open `/join`). SW v18.
+- 2026-10-22 — Added `/qr`: booth screen showing `qr.png` (replace that file to change the QR; it should open `/join`). SW v18.
