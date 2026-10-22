@@ -161,9 +161,9 @@
   <!-- Content -->
   <main class="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl">
     <header class="lb-header text-center mb-6">
-      <img src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
+      <img id="lbHeaderLogo" src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
            alt="Love Boo" width="130" loading="eager" class="w-32 mx-auto">
-      <p class="mt-2 text-xs font-bold uppercase tracking-[0.12em] opacity-85">Baby Expo 2026</p>
+      <p id="lbHeaderTag" class="mt-2 text-xs font-bold uppercase tracking-[0.12em] opacity-85">Baby Expo 2026</p>
     </header>
 
     <!-- Success / prize reveal -->
@@ -177,6 +177,12 @@
       <img id="lbPrizeImage" class="lb-prize-image object-contain mx-auto mb-4" alt="">
       <h2 id="lbSuccessTitle" class="text-2xl sm:text-3xl font-extrabold mb-2">Thank you!</h2>
       <p id="lbSuccessMessage" class="opacity-90">You're registered. Show this screen at our booth to collect your gift bag.</p>
+      <div id="lbCodeBox" hidden class="mx-auto my-5 max-w-xs rounded-2xl border-2 border-dashed border-primary bg-base-100 px-6 py-5">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] opacity-70">Your discount code</p>
+        <p id="lbCodeText" class="mt-1 text-3xl sm:text-4xl font-extrabold tracking-[0.12em] text-primary select-all"></p>
+        <button type="button" id="lbCopyBtn" class="btn btn-outline btn-primary btn-sm mt-3">Copy code</button>
+      </div>
+      <a id="lbShopBtn" hidden href="https://loveboo.com" class="btn btn-primary mt-2 rounded-2xl px-8">Shop now</a>
       <p id="lbSuccessEmail" class="text-sm opacity-70 mt-2"></p>
       <button type="button" id="lbBackBtn" class="btn btn-ghost btn-sm mt-6 opacity-70">&#8635; Back to start</button>
     </section>
@@ -711,6 +717,13 @@
     let pendingRegistration = null;
     let spinCount = 0;
 
+    // /join (the QR code's page): same sign-up form, no wheel. The guest gets a
+    // discount code on screen, and ops emails it to them (it recognises these
+    // registrations by their "_qr" source).
+    const QR_MODE = window.location.pathname.replace(/\/+$/, "") === "/join";
+    const QR_CODE = "HELLO20";
+    const QR_SOURCE = "baby_expo_2026_qr";
+
     function showLanding() {
       form.style.display = "none";
       successView.style.display = "none";
@@ -732,7 +745,7 @@
       form.reset();
       form.style.display = "block";
       submitBtn.disabled = false;
-      submitBtn.textContent = "Sign Up";
+      submitBtn.textContent = QR_MODE ? "Get My Code" : "Sign Up";
       const firstInput = document.getElementById("LbFirst");
       if (firstInput) firstInput.focus();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -762,6 +775,21 @@
       spinStatus.hidden = false;
       spinStatus.textContent = "Good luck!";
       wheelMode = "spinning";
+    }
+
+    function revealQrCode() {
+      wheelPanel.style.display = "none";
+      form.style.display = "none";
+      prizeImage.classList.remove("visible");
+      successBadge.style.display = "flex";
+      successTitle.textContent = "You're in! Here's your code";
+      successMessage.textContent = "Valid for 2 weeks. Use it at checkout on loveboo.com. We've also emailed it to you.";
+      document.getElementById("lbCodeText").textContent = QR_CODE;
+      document.getElementById("lbCodeBox").hidden = false;
+      document.getElementById("lbShopBtn").hidden = false;
+      successEmail.textContent = pendingRegistration ? "Sent to " + pendingRegistration.email : "";
+      successView.style.display = "block";
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function revealResult(prize, imageUrl) {
@@ -912,7 +940,7 @@
         email: p.email,
         phone: p.fullPhone || null,
         is_parent: p.isParent,
-        source: p.utmParams.utm_source || "baby_expo_2026",
+        source: QR_MODE ? QR_SOURCE : (p.utmParams.utm_source || "baby_expo_2026"),
         prize: finalPrize,
         utm_source: p.utmParams.utm_source || null,
         utm_medium: p.utmParams.utm_medium || null,
@@ -934,7 +962,28 @@
       });
     }
 
-    showLanding();
+    if (QR_MODE) {
+      const logo = document.getElementById("lbHeaderLogo");
+      logo.src = "/lockup.png";
+      logo.alt = "Love Boo x Baby & Kids Expo Dubai";
+      logo.removeAttribute("width");
+      logo.className = "w-72 sm:w-96 max-w-full mx-auto";
+      document.getElementById("lbHeaderTag").hidden = true;
+      document.title = "Get your Love Boo code";
+      document.getElementById("lbCopyBtn").addEventListener("click", function(e) {
+        const btn = e.currentTarget;
+        const done = function() { btn.textContent = "Copied!"; setTimeout(function() { btn.textContent = "Copy code"; }, 2000); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(QR_CODE).then(done, function() {});
+      });
+      showFormView();
+      submitBtn.textContent = "Get My Code";
+      const intro = document.createElement("p");
+      intro.className = "text-center text-sm opacity-80 mb-4";
+      intro.textContent = "Sign up in seconds and we'll email you a Love Boo discount code.";
+      form.insertBefore(intro, form.firstChild);
+    } else {
+      showLanding();
+    }
 
     // Load the wheel for the idle preview right away so it's not blank —
     // re-fetched fresh again right before the actual spin so stock/prize
@@ -984,6 +1033,14 @@
           utmParams: getUrlParams()
         };
         spinCount = 0;
+
+        if (QR_MODE) {
+          recordRegistration(null);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Get My Code";
+          revealQrCode();
+          return;
+        }
 
         resetWheelRotation();
         const prizes = await fetchAvailablePrizes();
