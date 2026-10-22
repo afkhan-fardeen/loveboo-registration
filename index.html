@@ -131,6 +131,8 @@
     .lb-form { gap: 1.5rem; }
     /* Header logo: nearly edge to edge on phones, capped on larger screens. */
     .lb-header img.lb-logo { display: block; width: calc(100% + 1.5rem); max-width: none; height: auto; margin: -1.25rem -0.75rem; }
+    /* /join: a little smaller than the spin page. */
+    .lb-header img.lb-logo.lb-logo-sm { width: 94%; max-width: 28rem; margin: -1.25rem auto; }
     @media (min-width: 640px) { .lb-header img.lb-logo { width: 100%; max-width: 32rem; margin: -1.25rem auto; } }
   }
 </style>
@@ -951,6 +953,7 @@
     }
 
     if (QR_MODE) {
+      document.getElementById("lbHeaderLogo").classList.add("lb-logo-sm");
       document.title = "Get your Love Boo code";
       showFormView();
       submitBtn.textContent = "Get My Code";
