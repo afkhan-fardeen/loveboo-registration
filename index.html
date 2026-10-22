@@ -161,9 +161,8 @@
   <!-- Content -->
   <main class="relative z-10 w-full max-w-md sm:max-w-lg md:max-w-2xl">
     <header class="lb-header text-center mb-6">
-      <img id="lbHeaderLogo" src="https://loveboo.com/cdn/shop/files/Group_240724.png?v=1757584837&width=250"
-           alt="Love Boo" width="130" loading="eager" class="w-56 sm:w-48 mx-auto">
-      <p id="lbHeaderTag" class="mt-2 text-xs font-bold uppercase tracking-[0.12em] opacity-85">Baby Expo 2026</p>
+      <img id="lbHeaderLogo" src="logo-header.png" alt="Love Boo x Baby &amp; Kids Expo Dubai" width="600" height="200"
+           loading="eager" class="w-full max-w-[22rem] sm:max-w-md mx-auto -my-4">
     </header>
 
     <!-- Success / prize reveal -->
@@ -955,18 +954,6 @@
     }
 
     if (QR_MODE) {
-      const logo = document.getElementById("lbHeaderLogo");
-      // Love Boo above the expo logo, so each one is large on a phone.
-      logo.src = "/logo-lb.png";
-      logo.alt = "Love Boo";
-      logo.removeAttribute("width");
-      logo.className = "w-64 sm:w-72 max-w-full mx-auto";
-      const expo = document.createElement("img");
-      expo.src = "/logo-expo.png";
-      expo.alt = "Baby & Kids Expo Dubai";
-      expo.className = "w-44 sm:w-52 max-w-full mx-auto mt-4";
-      logo.insertAdjacentElement("afterend", expo);
-      document.getElementById("lbHeaderTag").hidden = true;
       document.title = "Get your Love Boo code";
       showFormView();
       submitBtn.textContent = "Get My Code";
