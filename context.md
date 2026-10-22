@@ -19,7 +19,7 @@ Registration + spin-to-win for the Love Boo booth at **Dubai Baby Expo 2026** (3
 | Stock-weighted odds, Mystery Gift = 10 | Live (browser-side pick + `claim_prize`). |
 | Server-side spin (`spin_wheel`) + `client_id` duplicate protection | Code is live and falls back safely, but **only active after `supabase/reliability.sql` is run in the Supabase SQL Editor** (not confirmed run). |
 | Admin dashboard (registrations, prizes, Klaviyo export) | Live. |
-| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v18`. |
+| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v19`. |
 | Klaviyo | Manual CSV import only. |
 | Real-device test (iPhone, Android, tablet, laptop) | **Not done yet.** |
 | Supabase backups | **To enable** in the dashboard before the event. |
