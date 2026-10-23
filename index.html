@@ -523,11 +523,19 @@
       try {
         // No cap here — the wheel shows every prize admin has toggled
         // "on the wheel" (active), however many that is.
-        const { data, error } = await sbClient
-          .from("prizes")
+        // prizes_available (daily-limit.sql) = active, in stock and under today's
+        // cap. Until that script has been run, fall back to the plain table.
+        let { data, error } = await sbClient
+          .from("prizes_available")
           .select("id, name, image_url, quantity, given_count")
-          .eq("active", true)
           .order("sort_order", { ascending: true });
+        if (error) {
+          ({ data, error } = await sbClient
+            .from("prizes")
+            .select("id, name, image_url, quantity, given_count")
+            .eq("active", true)
+            .order("sort_order", { ascending: true }));
+        }
         if (error) throw error;
         // Hide anything that's already out of stock so the wheel never
         // offers a prize there's none left of.
@@ -785,6 +793,10 @@
     function revealResult(prize, imageUrl) {
       wheelPanel.style.display = "none";
 
+      prizeImage.onerror = function() {
+        prizeImage.classList.remove("visible");
+        successBadge.style.display = "flex";
+      };
       if (imageUrl) {
         prizeImage.src = imageUrl;
         prizeImage.classList.add("visible");

@@ -298,6 +298,10 @@
           <input type="number" min="0" step="1" class="input input-bordered w-full bg-base-200" x-model="editGiven">
         </label>
       </div>
+      <label class="flex flex-col gap-1" x-show="edit && 'daily_limit' in edit">
+        <span class="text-xs font-bold">Max per day (Dubai time)</span>
+        <input type="number" min="0" step="1" placeholder="No daily limit" class="input input-bordered w-full bg-base-200" x-model="editDaily">
+      </label>
       <div role="alert" class="alert alert-error alert-soft text-sm" x-show="editError" x-text="editError"></div>
     </div>
     <div class="modal-action">
@@ -371,7 +375,7 @@
       prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
       toRemove: null,
       exportOpen: false, exportScope: "new",
-      edit: null, editName: "", editQty: "", editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
+      edit: null, editName: "", editQty: "", editDaily: "", editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
 
       get filtered() {
         const q = this.search.trim().toLowerCase();
@@ -496,7 +500,8 @@
       soldOut(p) { return p.quantity != null && (p.given_count || 0) >= p.quantity; },
       stockLabel(p) {
         const given = p.given_count || 0;
-        return p.quantity == null ? given + " given · unlimited" : given + " / " + p.quantity + " given";
+        const base = p.quantity == null ? given + " given · unlimited" : given + " / " + p.quantity + " given";
+        return p.daily_limit != null ? base + " · max " + p.daily_limit + "/day" : base;
       },
 
       // The wheel shows every prize with active = true, no cap — this
@@ -561,6 +566,7 @@
         this.editName = p.name;
         this.editQty = p.quantity == null ? "" : p.quantity;
         this.editGiven = p.given_count || 0;
+        this.editDaily = p.daily_limit == null ? "" : p.daily_limit;
         this.editFile = null;
         this.editPreview = "";
         this.editError = "";
@@ -580,6 +586,11 @@
             quantity: qtyRaw ? parseInt(qtyRaw, 10) : null,
             given_count: Math.max(0, parseInt(this.editGiven, 10) || 0)
           };
+          // Only when the column exists (daily-limit.sql has been run).
+          if ("daily_limit" in p) {
+            const dailyRaw = String(this.editDaily).trim();
+            changes.daily_limit = dailyRaw === "" ? null : Math.max(0, parseInt(dailyRaw, 10) || 0);
+          }
           let oldPath = null;
           if (this.editFile) {
             const file = this.editFile;
