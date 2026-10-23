@@ -104,19 +104,33 @@
   </header>
 
   <!-- Stats -->
-  <section class="stats stats-vertical sm:stats-horizontal bg-base-100 border border-secondary w-full mb-5">
+  <section class="stats stats-vertical sm:stats-horizontal bg-base-100 border border-secondary w-full mb-3">
     <div class="stat">
       <div class="stat-title">Registrations</div>
       <div class="stat-value text-primary" x-text="rows.length"></div>
     </div>
     <div class="stat">
-      <div class="stat-title">Prizes won</div>
-      <div class="stat-value text-primary" x-text="rows.filter(r => r.prize).length"></div>
+      <div class="stat-title">Spin &amp; win</div>
+      <div class="stat-value text-primary" x-text="rows.filter(r => !isQr(r)).length"></div>
+      <div class="stat-desc" x-text="rows.filter(r => !isQr(r) && r.prize).length + ' won a gift'"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">QR code</div>
+      <div class="stat-value text-primary" x-text="rows.filter(r => isQr(r)).length"></div>
+      <div class="stat-desc">got the discount code</div>
     </div>
     <div class="stat">
       <div class="stat-title">Parents</div>
       <div class="stat-value text-primary" x-text="rows.filter(r => (r.is_parent || '').toLowerCase() === 'yes').length"></div>
     </div>
+  </section>
+
+  <!-- Gifts given -->
+  <section class="flex flex-wrap items-center gap-2 mb-5" x-show="giftCounts.length">
+    <span class="text-xs font-bold uppercase tracking-wider opacity-70 mr-1">Gifts given</span>
+    <template x-for="g in giftCounts" :key="g[0]">
+      <span class="badge badge-accent" x-text="g[0] + ': ' + g[1]"></span>
+    </template>
   </section>
 
 
@@ -165,6 +179,11 @@
       </label>
       <span class="text-sm opacity-75 whitespace-nowrap" x-text="filtered.length + (filtered.length === 1 ? ' registration' : ' registrations')"></span>
     </div>
+    <div class="flex flex-wrap gap-2 mb-3">
+      <button type="button" class="btn btn-sm rounded-full" :class="typeFilter === 'all' ? 'btn-primary' : 'btn-outline btn-primary'" @click="typeFilter = 'all'" x-text="'All (' + rows.length + ')'"></button>
+      <button type="button" class="btn btn-sm rounded-full" :class="typeFilter === 'spin' ? 'btn-primary' : 'btn-outline btn-primary'" @click="typeFilter = 'spin'" x-text="'Spin & win (' + rows.filter(r => !isQr(r)).length + ')'"></button>
+      <button type="button" class="btn btn-sm rounded-full" :class="typeFilter === 'qr' ? 'btn-primary' : 'btn-outline btn-primary'" @click="typeFilter = 'qr'" x-text="'QR code (' + rows.filter(r => isQr(r)).length + ')'"></button>
+    </div>
 
     <!-- Phones: one card per registration -->
     <div class="sm:hidden flex flex-col gap-3">
@@ -173,13 +192,13 @@
           <div class="card-body p-4 gap-1 text-sm">
             <div class="flex items-start justify-between gap-2">
               <p class="font-extrabold text-base break-words" x-text="[r.first_name, r.last_name].filter(Boolean).join(' ')"></p>
-              <span class="badge badge-accent badge-sm shrink-0" x-show="r.prize" x-text="r.prize"></span>
+              <span class="badge badge-sm shrink-0" :class="outcome(r).gift ? 'badge-accent' : 'badge-ghost'" x-text="outcome(r).label"></span>
             </div>
             <p class="break-all" x-text="r.email"></p>
             <p x-show="r.phone" x-text="r.phone"></p>
             <div class="flex flex-wrap items-center gap-2 mt-1 text-xs opacity-75">
               <span class="badge badge-secondary badge-sm" x-text="'Parent: ' + (r.is_parent || '—')"></span>
-              <span x-text="r.source || ''"></span>
+              <span class="badge badge-outline badge-sm" x-text="outcome(r).type"></span>
               <span x-text="formatDate(r.created_at)"></span>
             </div>
           </div>
@@ -192,7 +211,7 @@
       <table class="table table-pin-rows table-zebra">
         <thead>
           <tr class="bg-base-300">
-            <th>Name</th><th>Email</th><th>Phone</th><th>Parent?</th><th>Source</th><th>Prize</th><th>Registered</th>
+            <th>Name</th><th>Email</th><th>Phone</th><th>Parent?</th><th>Signed up via</th><th>Got</th><th>Registered</th>
           </tr>
         </thead>
         <tbody>
@@ -202,10 +221,10 @@
               <td x-text="r.email"></td>
               <td class="whitespace-nowrap" x-text="r.phone || '—'"></td>
               <td><span class="badge badge-secondary badge-sm" x-text="r.is_parent || '—'"></span></td>
-              <td x-text="r.source || '—'"></td>
+              <td><span class="badge badge-outline badge-sm whitespace-nowrap" x-text="outcome(r).type"></span></td>
               <td>
-                <span class="badge badge-accent badge-sm" x-show="r.prize" x-text="r.prize"></span>
-                <span x-show="!r.prize">—</span>
+                <span class="badge badge-accent badge-sm" x-show="outcome(r).gift" x-text="outcome(r).label"></span>
+                <span class="text-sm opacity-70" x-show="!outcome(r).gift" x-text="outcome(r).label"></span>
               </td>
               <td class="whitespace-nowrap" x-text="formatDate(r.created_at)"></td>
             </tr>
@@ -357,6 +376,15 @@
   // true one-time action regardless of how many times init() runs.
   let realtimeSubscribed = false;
 
+  // What a guest got, from how they signed up: QR page = discount code, spin page = a gift (or no gift, then the code).
+  const DISCOUNT_CODE = "EXPO2026";
+  const isQr = r => /_qr$/.test(r.source || "");
+  function outcome(r) {
+    if (isQr(r)) return { type: "QR code", gift: false, label: DISCOUNT_CODE + " discount" };
+    if (r.prize) return { type: "Spin & win", gift: true, label: r.prize };
+    return { type: "Spin & win", gift: false, label: "No gift · " + DISCOUNT_CODE + " sent" };
+  }
+
   function matches(r, q) {
     if (!q) return true;
     return [r.first_name, r.last_name, r.email].filter(Boolean).join(" ").toLowerCase().includes(q);
@@ -387,6 +415,7 @@
       view: "login", tab: "registrations",
       email: "", password: "", loginError: "", loggingIn: false,
       rows: [], search: "", loading: false, loadError: "",
+      typeFilter: "all",
       prizes: [], prizesLoading: false, prizesLoaded: false, prizesLoadError: "",
       prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
       toRemove: null,
@@ -396,7 +425,12 @@
 
       get filtered() {
         const q = this.search.trim().toLowerCase();
-        return this.rows.filter(r => matches(r, q));
+        return this.rows.filter(r => matches(r, q) && (this.typeFilter === "all" || (this.typeFilter === "qr") === isQr(r)));
+      },
+      get giftCounts() {
+        const m = {};
+        this.rows.forEach(r => { if (!isQr(r) && r.prize) m[r.prize] = (m[r.prize] || 0) + 1; });
+        return Object.entries(m).sort((a, b) => b[1] - a[1]);
       },
 
       async init() {
@@ -478,7 +512,7 @@
         // Header names follow Klaviyo's own "List Import Template" CSV. Only
         // the columns we have data for are included; the rest of the template
         // is optional. "Custom Property (X)" columns import as profile properties.
-        const headers = ["email", "phone number", "external id", "Email Marketing Consent", "Email Marketing Consent Timestamp", "SMS Marketing Consent", "SMS Marketing Consent Timestamp", "firstname", "lastname", "Custom Property (Prize)", "Custom Property (Is Parent)", "Custom Property (Event)", "Custom Property (Source)", "Custom Property (UTM Source)", "Custom Property (UTM Medium)", "Custom Property (UTM Campaign)"];
+        const headers = ["email", "phone number", "external id", "Email Marketing Consent", "Email Marketing Consent Timestamp", "SMS Marketing Consent", "SMS Marketing Consent Timestamp", "firstname", "lastname", "Custom Property (Signup Type)", "Custom Property (Prize)", "Custom Property (Discount Code)", "Custom Property (Is Parent)", "Custom Property (Event)", "Custom Property (Source)", "Custom Property (UTM Source)", "Custom Property (UTM Medium)", "Custom Property (UTM Campaign)"];
         const ts = iso => new Date(iso).toISOString().slice(0, 19).replace("T", " ");
         const csv = [headers.join(",")];
         list.slice().reverse().forEach(r => {
@@ -488,7 +522,7 @@
             "SUBSCRIBE", when,
             r.phone ? "SUBSCRIBE" : "", r.phone ? when : "",
             r.first_name, r.last_name,
-            r.prize || "None", r.is_parent, "Dubai Baby Expo 2026", r.source,
+            outcome(r).type, r.prize || "None", (isQr(r) || !r.prize) ? DISCOUNT_CODE : "", r.is_parent, "Dubai Baby Expo 2026", r.source,
             r.utm_source, r.utm_medium, r.utm_campaign
           ].map((v, i) => csvCell(v, i <= 2)).join(","));
         });
@@ -499,10 +533,10 @@
       },
 
       downloadCsv() {
-        const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
+        const headers = ["First Name", "Last Name", "Email", "Phone", "Parent", "Signed up via", "Got", "Source", "Prize", "UTM Source", "UTM Medium", "UTM Campaign", "Registered At"];
         const csv = [headers.join(",")];
         this.filtered.forEach(r => {
-          csv.push([r.first_name, r.last_name, r.email, r.phone, r.is_parent, r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at]
+          csv.push([r.first_name, r.last_name, r.email, r.phone, r.is_parent, outcome(r).type, outcome(r).label, r.source, r.prize, r.utm_source, r.utm_medium, r.utm_campaign, r.created_at]
             .map((v, i) => csvCell(v, i === 2 || i === 3)).join(","));
         });
         saveCsv(csv, "loveboo-registrations-" + new Date().toISOString().slice(0, 10) + ".csv");
