@@ -527,7 +527,7 @@
         // cap. Until that script has been run, fall back to the plain table.
         let { data, error } = await sbClient
           .from("prizes_available")
-          .select("id, name, image_url, quantity, given_count")
+          .select("*")
           .order("sort_order", { ascending: true });
         if (error) {
           ({ data, error } = await sbClient
@@ -553,16 +553,17 @@
     // small-stock one (e.g. the 10-unit Mystery Gift) comes up rarely.
     // Unlimited prizes weigh as much as the largest limited stock.
     // "Try Again" gets TRY_AGAIN_SHARE of the total probability.
-    const TRY_AGAIN_SHARE = 0.25;
+    const TRY_AGAIN_SHARE = 0.10;   // browser-side fallback only; the real share is set in admin (wheel_settings)
 
     function pickWeightedIndex() {
       const remaining = wheelSegments.map(function(seg) {
-        if (seg === TRY_AGAIN || seg.quantity == null) return null;
+        if (seg === TRY_AGAIN || seg.weight != null || seg.quantity == null) return null;
         return Math.max(0, seg.quantity - (seg.given_count || 0));
       });
       const unlimitedWeight = Math.max(1, ...remaining.filter(function(r) { return r != null; }));
       const weights = wheelSegments.map(function(seg, i) {
         if (seg === TRY_AGAIN) return 0;
+        if (seg.weight != null) return Number(seg.weight);
         return remaining[i] == null ? unlimitedWeight : remaining[i];
       });
       const prizeTotal = weights.reduce(function(a, b) { return a + b; }, 0);

@@ -219,6 +219,16 @@
 
   <!-- Prizes -->
   <section x-show="tab === 'prizes'">
+    <div class="card bg-base-100 border border-secondary mb-5" x-show="tryAgainPct !== null">
+      <div class="card-body p-4 flex-row flex-wrap items-end gap-3">
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-bold">"Try Again" chance (%)</span>
+          <input type="number" min="0" max="90" step="1" class="input input-bordered w-32 bg-base-200" x-model.number="tryAgainPct">
+        </label>
+        <button type="button" class="btn btn-outline btn-primary" :disabled="savingTryAgain" @click="saveTryAgain()">Save</button>
+        <p class="text-xs opacity-70 flex-1 min-w-48">Share of each spin that lands on Try Again. A first Try Again gives a free re-spin, so guests end up with nothing much less often. Set each prize's chance with Edit.</p>
+      </div>
+    </div>
     <form class="card bg-base-100 border border-secondary mb-5" @submit.prevent="addPrize($refs.prizeForm)" x-ref="prizeForm">
       <div class="card-body sm:flex-row flex-col items-stretch sm:items-end gap-3 p-4">
         <label class="form-control flex-1 min-w-40">
@@ -254,6 +264,7 @@
           <div class="card-body p-3 gap-1 items-center">
             <p class="font-bold text-sm break-words" x-text="p.name"></p>
             <span class="badge badge-sm" :class="soldOut(p) ? 'badge-error' : 'badge-secondary'" x-text="stockLabel(p)"></span>
+            <span class="text-xs font-semibold text-primary" x-show="oddsLabel(p)" x-text="oddsLabel(p)"></span>
             <label class="flex items-center gap-2 text-xs font-semibold mt-1.5 cursor-pointer">
               <input type="checkbox" class="toggle toggle-primary toggle-sm" :checked="p.active" @change="toggleActive(p)">
               <span x-text="p.active ? 'On wheel' : 'Hidden'"></span>
@@ -301,6 +312,11 @@
       <label class="flex flex-col gap-1" x-show="edit && 'daily_limit' in edit">
         <span class="text-xs font-bold">Max per day (Dubai time)</span>
         <input type="number" min="0" step="1" placeholder="No daily limit" class="input input-bordered w-full bg-base-200" x-model="editDaily">
+      </label>
+      <label class="flex flex-col gap-1" x-show="edit && 'weight' in edit">
+        <span class="text-xs font-bold">Chance weight</span>
+        <input type="number" min="0" step="any" placeholder="Empty = by remaining stock" class="input input-bordered w-full bg-base-200" x-model="editWeight">
+        <span class="text-xs opacity-70">Higher wins more often, relative to the other prizes (46 vs 2 means 23 times as often). Empty = by remaining stock.</span>
       </label>
       <div role="alert" class="alert alert-error alert-soft text-sm" x-show="editError" x-text="editError"></div>
     </div>
@@ -375,7 +391,8 @@
       prizeName: "", prizeQty: "", prizeFile: null, addingPrize: false, prizeError: "",
       toRemove: null,
       exportOpen: false, exportScope: "new",
-      edit: null, editName: "", editQty: "", editDaily: "", editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
+      edit: null, editName: "", editQty: "", editDaily: "", editWeight: "",
+      tryAgainPct: null, savingTryAgain: false, editGiven: 0, editFile: null, editPreview: "", editError: "", savingEdit: false,
 
       get filtered() {
         const q = this.search.trim().toLowerCase();
@@ -497,6 +514,28 @@
         if (!this.prizesLoaded) { this.prizesLoaded = true; this.loadPrizes(); }
       },
 
+      // Chance of landing on this prize per guest, mirroring spin_wheel() (ignores today's daily caps).
+      oddsLabel(p) {
+        if (this.tryAgainPct === null || !("weight" in p) || !p.active || this.soldOut(p)) return "";
+        const live = this.prizes.filter(q => q.active && !this.soldOut(q));
+        const largest = Math.max(1, ...live.filter(q => q.quantity != null).map(q => q.quantity - (q.given_count || 0)));
+        const w = q => q.weight != null ? Number(q.weight) : (q.quantity == null ? largest : q.quantity - (q.given_count || 0));
+        const total = live.reduce((a, q) => a + w(q), 0);
+        if (!total) return "";
+        const ta = this.tryAgainPct / 100;
+        const perSpin = w(p) / total * (1 - ta);
+        const perGuest = perSpin * (1 + ta);   // a first Try Again gives one free re-spin
+        return "≈ " + (perGuest * 100).toFixed(perGuest < 0.1 ? 1 : 0) + "% of guests";
+      },
+      async saveTryAgain() {
+        this.savingTryAgain = true;
+        const pct = Math.min(90, Math.max(0, Number(this.tryAgainPct) || 0));
+        const { error } = await sbClient.from("wheel_settings").update({ try_again_pct: pct }).eq("id", 1);
+        this.savingTryAgain = false;
+        if (error) { this.prizeError = "Couldn't save: " + error.message; return; }
+        this.tryAgainPct = pct;
+        this.prizeError = "";
+      },
       soldOut(p) { return p.quantity != null && (p.given_count || 0) >= p.quantity; },
       stockLabel(p) {
         const given = p.given_count || 0;
@@ -530,6 +569,9 @@
           return;
         }
         this.prizes = data || [];
+        // Present only after odds.sql has been run.
+        const ts = await sbClient.from("wheel_settings").select("try_again_pct").eq("id", 1).maybeSingle();
+        this.tryAgainPct = ts.data ? Number(ts.data.try_again_pct) : null;
       },
 
       async addPrize(form) {
@@ -567,6 +609,7 @@
         this.editQty = p.quantity == null ? "" : p.quantity;
         this.editGiven = p.given_count || 0;
         this.editDaily = p.daily_limit == null ? "" : p.daily_limit;
+        this.editWeight = p.weight == null ? "" : p.weight;
         this.editFile = null;
         this.editPreview = "";
         this.editError = "";
@@ -590,6 +633,10 @@
           if ("daily_limit" in p) {
             const dailyRaw = String(this.editDaily).trim();
             changes.daily_limit = dailyRaw === "" ? null : Math.max(0, parseInt(dailyRaw, 10) || 0);
+          }
+          if ("weight" in p) {
+            const w = String(this.editWeight).trim();
+            changes.weight = w === "" ? null : Math.max(0, Number(w) || 0);
           }
           let oldPath = null;
           if (this.editFile) {

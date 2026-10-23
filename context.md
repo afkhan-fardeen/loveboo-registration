@@ -19,7 +19,7 @@ Registration + spin-to-win for the Love Boo booth at **Dubai Baby Expo 2026** (3
 | Stock-weighted odds, Mystery Gift = 10 | Live (browser-side pick + `claim_prize`). |
 | Server-side spin (`spin_wheel`) + `client_id` duplicate protection | Code is live and falls back safely, but **only active after `supabase/reliability.sql` is run in the Supabase SQL Editor** (not confirmed run). |
 | Admin dashboard (registrations, prizes, Klaviyo export) | Live. |
-| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v24`. |
+| PWA (installable, offline shell, shortcuts) | Live, service worker cache `lb-shell-v25`. |
 | Klaviyo | Manual CSV import only. |
 | Real-device test (iPhone, Android, tablet, laptop) | **Not done yet.** |
 | Supabase backups | **To enable** in the dashboard before the event. |
@@ -95,3 +95,4 @@ The `prizes` table, `claim_prize` RPC and the RLS policies were created directly
 - 2026-10-22 — Added `/join` (same `index.html`, rewrite in `vercel.json`): sign-up form only, then "Thank you, check your email for your discount code" (the code is only in the email); saved with source `baby_expo_2026_qr`, no prize. Use either the spin page (`/`) or `/join` at the event. Header uses `lockup.png` (Love Boo x Baby & Kids Expo). QR image: `ASSETS/loveboo-expo-qr.png|svg`. SW v17.
 - 2026-10-22 — Added `/qr`: booth screen showing `qr.png` (replace that file to change the QR; it should open `/join`). SW v18.
 - 2026-10-23 — Per-prize daily cap: `supabase/daily-limit.sql` (**run once in the SQL Editor**) adds `prizes.daily_limit`, `prize_daily`, the `prizes_available` view (the wheel loads it) and a new `spin_wheel()` that enforces the cap per Dubai day; sets Mystery Gift to max 3/day on top of its total of 10. Admin: edit a prize -> "Max per day". Until the SQL is run the page falls back to the plain prizes table (no cap). The browser-side fallback pick (only used if `spin_wheel` fails) does not enforce the daily cap. SW v24.
+- 2026-10-23 — Explicit odds: `supabase/odds.sql` (**run once after daily-limit.sql**) adds `prizes.weight` (relative chance; empty = by remaining stock), `wheel_settings.try_again_pct`, and a `spin_wheel()` that uses them. Seeded: Try Again 10%, weights 46 / 46 / 3.5 / 2 / 0.5 (3x50ml, 6x50ml, Mama, Detangle, Mystery) = per guest (with the free re-spin) about 46 / 46 / 3.5 / 2 / 0.5 % and 1% nothing. Admin: Try Again % box on the Wheel Prizes tab, "Chance weight" in each prize's Edit, and an estimated "% of guests" on each card. SW v25. (Supersedes the stock-weighted odds and fixed 25% Try Again described in section 5 once the SQL is run.)
