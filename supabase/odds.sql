@@ -112,11 +112,12 @@ revoke all on function public.spin_wheel(boolean) from public;
 grant execute on function public.spin_wheel(boolean) to anon, authenticated;
 
 -- Starting odds: Try Again 20% (a free re-spin), and the re-spin always gives a gift. The two 50ml sets are
--- pushed hard and the special gifts stay rare. Every guest ends up with a gift while stock lasts, about:
--- 3 x 50ml 47%, 6 x 50ml 47%, Mama Set 3.6%, Detangle Set 2%, Mystery Gift 0.5%. Both numbers are editable in the admin.
+-- 3 x 50ml pushed hardest, 6 x 50ml lower, the special gifts rare. Every guest ends up with a gift while stock
+-- lasts, about: 3 x 50ml 64%, 6 x 50ml 30%, Mama Set 3.5%, Detangle Set 2%, Mystery Gift 0.5%.
+-- Both numbers are editable in the admin (Try Again box, and Edit on each prize).
 update public.wheel_settings set try_again_pct = 20 where id = 1;
-update public.prizes set weight = 46  where name = '3 × 50ml Products';
-update public.prizes set weight = 46  where name = '6 × 50ml Products';
+update public.prizes set weight = 64  where name = '3 × 50ml Products';
+update public.prizes set weight = 30  where name = '6 × 50ml Products';
 update public.prizes set weight = 3.5 where name = 'Mama Set';
 update public.prizes set weight = 2   where name = 'Detangle Set';
 update public.prizes set weight = 0.5 where name = 'Mystery Gift';
