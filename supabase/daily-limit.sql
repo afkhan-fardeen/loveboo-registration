@@ -97,5 +97,5 @@ $$;
 revoke all on function public.spin_wheel() from public;
 grant execute on function public.spin_wheel() to anon, authenticated;
 
--- 5. The limit you asked for: Mystery Gift, at most 3 a day (it still has its total stock as well).
-update public.prizes set daily_limit = 3 where name = 'Mystery Gift';
+-- 5. The limit you asked for: Mystery Gift, at most 2 a day (it still has its total stock as well).
+update public.prizes set daily_limit = 2 where name = 'Mystery Gift';

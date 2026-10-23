@@ -537,11 +537,10 @@
             .order("sort_order", { ascending: true }));
         }
         if (error) throw error;
-        // Hide anything that's already out of stock so the wheel never
-        // offers a prize there's none left of.
-        return (data || []).filter(function(p) {
-          return p.quantity == null || p.given_count < p.quantity;
-        });
+        // Stock is only for the team's own tracking: it never removes a gift from the
+        // wheel (switching a prize off, or its daily cap, does that; both are handled
+        // by prizes_available).
+        return data || [];
       } catch (err) {
         console.warn("Could not load prizes:", err);
         return [];
@@ -555,16 +554,15 @@
     // "Try Again" gets TRY_AGAIN_SHARE of the total probability.
     const TRY_AGAIN_SHARE = 0.20;   // browser-side fallback only; the real share is set in admin (wheel_settings)
 
+    // Browser-side fallback only (the real pick is spin_wheel() in the database): the same
+    // rules, fixed weights per gift, a separate set for guests who aren't parents, and
+    // stock ignored. Gifts without a weight count as 1.
     function pickWeightedIndex(noTryAgain) {
-      const remaining = wheelSegments.map(function(seg) {
-        if (seg === TRY_AGAIN || seg.weight != null || seg.quantity == null) return null;
-        return Math.max(0, seg.quantity - (seg.given_count || 0));
-      });
-      const unlimitedWeight = Math.max(1, ...remaining.filter(function(r) { return r != null; }));
-      const weights = wheelSegments.map(function(seg, i) {
+      const isParent = !(pendingRegistration && pendingRegistration.isParent === "No");
+      const weights = wheelSegments.map(function(seg) {
         if (seg === TRY_AGAIN) return 0;
-        if (seg.weight != null) return Number(seg.weight);
-        return remaining[i] == null ? unlimitedWeight : remaining[i];
+        const w = isParent ? seg.weight : (seg.weight_non_parent != null ? seg.weight_non_parent : seg.weight);
+        return w != null ? Number(w) : 1;
       });
       const prizeTotal = weights.reduce(function(a, b) { return a + b; }, 0);
       const tryAgainIdx = wheelSegments.indexOf(TRY_AGAIN);
@@ -840,12 +838,13 @@
     // isFinal = the guest's second spin (after a Try Again): it always gives a gift
     // while any gift is left. Falls back to the old no-argument function until
     // odds.sql has been run.
-    async function serverSpin(isFinal) {
+    async function serverSpin(isFinal, isParent) {
       if (!sbClient) return null;
       const controller = new AbortController();
       const timer = setTimeout(function() { controller.abort(); }, 8000);
       try {
-        let { data, error } = await sbClient.rpc("spin_wheel", { p_final: !!isFinal }).abortSignal(controller.signal);
+        let { data, error } = await sbClient.rpc("spin_wheel", { p_final: !!isFinal, p_parent: !!isParent }).abortSignal(controller.signal);
+        if (error && error.code === "PGRST202") ({ data, error } = await sbClient.rpc("spin_wheel", { p_final: !!isFinal }).abortSignal(controller.signal));
         if (error && error.code === "PGRST202") ({ data, error } = await sbClient.rpc("spin_wheel").abortSignal(controller.signal));
         if (error || !data || !data.kind) return null;
         return data;
@@ -863,7 +862,7 @@
       showSpinning();
       spinCount++;
 
-      const server = await serverSpin(spinCount >= 2);
+      const server = await serverSpin(spinCount >= 2, !(pendingRegistration && pendingRegistration.isParent === "No"));
       let targetIndex;
       if (server && server.kind === "prize") {
         targetIndex = wheelSegments.findIndex(function(s) { return s.id === server.id; });
@@ -913,17 +912,10 @@
         } else {
           // Fallback path: atomically claim a tracked prize. If someone took
           // the last unit meanwhile, fall back to a no-prize outcome.
-          let claimed = false;
-          try {
-            const { data, error } = await sbClient.rpc("claim_prize", { target_id: seg.id });
-            claimed = !error && data === true;
-          } catch (err) {
-            claimed = false;
-          }
-          if (claimed) {
-            finalPrize = seg.name;
-            finalPrizeImage = seg.image_url;
-          }
+          // Best-effort count only: stock is for tracking, so a refused claim doesn't take the gift away.
+          try { await sbClient.rpc("claim_prize", { target_id: seg.id }); } catch (err) { /* ignore */ }
+          finalPrize = seg.name;
+          finalPrizeImage = seg.image_url;
         }
       }
 
