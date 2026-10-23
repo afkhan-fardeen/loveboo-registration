@@ -20,6 +20,10 @@ alter table public.wheel_settings enable row level security;
 drop policy if exists "admin manages wheel settings" on public.wheel_settings;
 create policy "admin manages wheel settings" on public.wheel_settings
   for all to authenticated using (true) with check (true);
+-- The page reads the Try Again share (at 0% it hides that slice from the wheel).
+drop policy if exists "anyone reads wheel settings" on public.wheel_settings;
+create policy "anyone reads wheel settings" on public.wheel_settings
+  for select to anon, authenticated using (true);
 
 -- The wheel on the page loads this view; it now also carries the weight.
 create or replace view public.prizes_available as
@@ -98,10 +102,11 @@ $$;
 revoke all on function public.spin_wheel() from public;
 grant execute on function public.spin_wheel() to anon, authenticated;
 
--- Starting odds: the two 50ml sets are pushed hard, the special gifts stay rare, Try Again 10%.
--- Per guest (including the free re-spin) that is about: 3 x 50ml 46%, 6 x 50ml 46%, Mama Set 3.5%,
--- Detangle Set 2%, Mystery Gift 0.5%, nothing 1%. Change any of these later in the admin.
-update public.wheel_settings set try_again_pct = 10 where id = 1;
+-- Starting odds: everyone wins a gift while stock lasts (Try Again 0%), the two 50ml sets are pushed hard
+-- and the special gifts stay rare. Per guest that is about: 3 x 50ml 47%, 6 x 50ml 47%, Mama Set 3.6%,
+-- Detangle Set 2%, Mystery Gift 0.5%. Anyone who still gets no gift (all stock gone) is emailed the discount
+-- code instead. Raise Try Again in the admin if you ever want fewer winners.
+update public.wheel_settings set try_again_pct = 0 where id = 1;
 update public.prizes set weight = 46  where name = '3 × 50ml Products';
 update public.prizes set weight = 46  where name = '6 × 50ml Products';
 update public.prizes set weight = 3.5 where name = 'Mama Set';

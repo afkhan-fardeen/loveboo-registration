@@ -518,6 +518,8 @@
     let segmentAngle = 360;
     let currentRotation = 0;
 
+    let hideTryAgain = false;
+
     async function fetchAvailablePrizes() {
       if (!sbClient) return [];
       try {
@@ -537,6 +539,9 @@
             .order("sort_order", { ascending: true }));
         }
         if (error) throw error;
+        // Try Again at 0% (odds.sql): everyone wins a gift, so don't draw that slice.
+        const ts = await sbClient.from("wheel_settings").select("try_again_pct").eq("id", 1).maybeSingle();
+        hideTryAgain = !!(ts.data && Number(ts.data.try_again_pct) === 0 && (data || []).length > 0);
         // Hide anything that's already out of stock so the wheel never
         // offers a prize there's none left of.
         return (data || []).filter(function(p) {
@@ -568,19 +573,19 @@
       });
       const prizeTotal = weights.reduce(function(a, b) { return a + b; }, 0);
       const tryAgainIdx = wheelSegments.indexOf(TRY_AGAIN);
-      weights[tryAgainIdx] = prizeTotal * TRY_AGAIN_SHARE / (1 - TRY_AGAIN_SHARE);
+      if (tryAgainIdx >= 0) weights[tryAgainIdx] = prizeTotal * TRY_AGAIN_SHARE / (1 - TRY_AGAIN_SHARE);
 
       let roll = Math.random() * weights.reduce(function(a, b) { return a + b; }, 0);
       for (let i = 0; i < weights.length; i++) {
         roll -= weights[i];
         if (roll < 0) return i;
       }
-      return tryAgainIdx;
+      return tryAgainIdx >= 0 ? tryAgainIdx : weights.length - 1;
     }
 
     function setWheelSegments(prizes) {
       const gifts = prizes.length ? prizes : [{ name: "Mystery Gift", image_url: null }];
-      wheelSegments = gifts.concat([TRY_AGAIN]);
+      wheelSegments = hideTryAgain && prizes.length ? gifts : gifts.concat([TRY_AGAIN]);
       segmentAngle = 360 / wheelSegments.length;
 
       const stops = wheelSegments.map(function(seg, i) {
@@ -812,7 +817,7 @@
         successMessage.textContent = "Show this screen at our booth, or show the email we've sent you, to collect your gift.";
       } else {
         successTitle.textContent = "Thanks for playing!";
-        successMessage.textContent = "You're registered — no prize this time, but keep an eye out for future giveaways.";
+        successMessage.textContent = "No gift this time, but we've emailed you a 25% off code for loveboo.com.";
       }
       successEmail.textContent = pendingRegistration ? "Registered with " + pendingRegistration.email : "";
       successView.style.display = "block";
@@ -873,6 +878,12 @@
           targetIndex = wheelSegments.length - 2;
         }
       } else if (server) {
+        if (wheelSegments.indexOf(TRY_AGAIN) < 0) {
+          // Nothing left to give: bring the Try Again slice back so the wheel can land on it.
+          hideTryAgain = false;
+          setWheelSegments(wheelSegments.slice());
+          layoutWheelLabels();
+        }
         targetIndex = wheelSegments.indexOf(TRY_AGAIN);
       } else {
         targetIndex = pickWeightedIndex();
