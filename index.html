@@ -518,8 +518,6 @@
     let segmentAngle = 360;
     let currentRotation = 0;
 
-    let hideTryAgain = false;
-
     async function fetchAvailablePrizes() {
       if (!sbClient) return [];
       try {
@@ -539,9 +537,6 @@
             .order("sort_order", { ascending: true }));
         }
         if (error) throw error;
-        // Try Again at 0% (odds.sql): everyone wins a gift, so don't draw that slice.
-        const ts = await sbClient.from("wheel_settings").select("try_again_pct").eq("id", 1).maybeSingle();
-        hideTryAgain = !!(ts.data && Number(ts.data.try_again_pct) === 0 && (data || []).length > 0);
         // Hide anything that's already out of stock so the wheel never
         // offers a prize there's none left of.
         return (data || []).filter(function(p) {
@@ -558,9 +553,9 @@
     // small-stock one (e.g. the 10-unit Mystery Gift) comes up rarely.
     // Unlimited prizes weigh as much as the largest limited stock.
     // "Try Again" gets TRY_AGAIN_SHARE of the total probability.
-    const TRY_AGAIN_SHARE = 0.10;   // browser-side fallback only; the real share is set in admin (wheel_settings)
+    const TRY_AGAIN_SHARE = 0.20;   // browser-side fallback only; the real share is set in admin (wheel_settings)
 
-    function pickWeightedIndex() {
+    function pickWeightedIndex(noTryAgain) {
       const remaining = wheelSegments.map(function(seg) {
         if (seg === TRY_AGAIN || seg.weight != null || seg.quantity == null) return null;
         return Math.max(0, seg.quantity - (seg.given_count || 0));
@@ -573,7 +568,7 @@
       });
       const prizeTotal = weights.reduce(function(a, b) { return a + b; }, 0);
       const tryAgainIdx = wheelSegments.indexOf(TRY_AGAIN);
-      if (tryAgainIdx >= 0) weights[tryAgainIdx] = prizeTotal * TRY_AGAIN_SHARE / (1 - TRY_AGAIN_SHARE);
+      if (tryAgainIdx >= 0) weights[tryAgainIdx] = noTryAgain ? 0 : prizeTotal * TRY_AGAIN_SHARE / (1 - TRY_AGAIN_SHARE);
 
       let roll = Math.random() * weights.reduce(function(a, b) { return a + b; }, 0);
       for (let i = 0; i < weights.length; i++) {
@@ -585,7 +580,7 @@
 
     function setWheelSegments(prizes) {
       const gifts = prizes.length ? prizes : [{ name: "Mystery Gift", image_url: null }];
-      wheelSegments = hideTryAgain && prizes.length ? gifts : gifts.concat([TRY_AGAIN]);
+      wheelSegments = gifts.concat([TRY_AGAIN]);
       segmentAngle = 360 / wheelSegments.length;
 
       const stops = wheelSegments.map(function(seg, i) {
@@ -817,7 +812,7 @@
         successMessage.textContent = "Show this screen at our booth, or show the email we've sent you, to collect your gift.";
       } else {
         successTitle.textContent = "Thanks for playing!";
-        successMessage.textContent = "No gift this time, but we've emailed you a 25% off code for loveboo.com.";
+        successMessage.textContent = "You're registered — no prize this time, but keep an eye out for future giveaways.";
       }
       successEmail.textContent = pendingRegistration ? "Registered with " + pendingRegistration.email : "";
       successView.style.display = "block";
@@ -842,12 +837,16 @@
     // Asks the database to pick AND claim in one atomic step (reliability.sql).
     // Returns null if that isn't available, in which case doSpin falls back to
     // the in-browser weighted pick + claim_prize.
-    async function serverSpin() {
+    // isFinal = the guest's second spin (after a Try Again): it always gives a gift
+    // while any gift is left. Falls back to the old no-argument function until
+    // odds.sql has been run.
+    async function serverSpin(isFinal) {
       if (!sbClient) return null;
       const controller = new AbortController();
       const timer = setTimeout(function() { controller.abort(); }, 8000);
       try {
-        const { data, error } = await sbClient.rpc("spin_wheel").abortSignal(controller.signal);
+        let { data, error } = await sbClient.rpc("spin_wheel", { p_final: !!isFinal }).abortSignal(controller.signal);
+        if (error && error.code === "PGRST202") ({ data, error } = await sbClient.rpc("spin_wheel").abortSignal(controller.signal));
         if (error || !data || !data.kind) return null;
         return data;
       } catch (err) {
@@ -864,7 +863,7 @@
       showSpinning();
       spinCount++;
 
-      const server = await serverSpin();
+      const server = await serverSpin(spinCount >= 2);
       let targetIndex;
       if (server && server.kind === "prize") {
         targetIndex = wheelSegments.findIndex(function(s) { return s.id === server.id; });
@@ -878,15 +877,9 @@
           targetIndex = wheelSegments.length - 2;
         }
       } else if (server) {
-        if (wheelSegments.indexOf(TRY_AGAIN) < 0) {
-          // Nothing left to give: bring the Try Again slice back so the wheel can land on it.
-          hideTryAgain = false;
-          setWheelSegments(wheelSegments.slice());
-          layoutWheelLabels();
-        }
         targetIndex = wheelSegments.indexOf(TRY_AGAIN);
       } else {
-        targetIndex = pickWeightedIndex();
+        targetIndex = pickWeightedIndex(spinCount >= 2);
       }
 
       const seg = wheelSegments[targetIndex];

@@ -245,7 +245,7 @@
           <input type="number" min="0" max="90" step="1" class="input input-bordered w-32 bg-base-200" x-model.number="tryAgainPct">
         </label>
         <button type="button" class="btn btn-outline btn-primary" :disabled="savingTryAgain" @click="saveTryAgain()">Save</button>
-        <p class="text-xs opacity-70 flex-1 min-w-48">Share of each spin that lands on Try Again. A first Try Again gives a free re-spin, so guests end up with nothing much less often. Set each prize's chance with Edit.</p>
+        <p class="text-xs opacity-70 flex-1 min-w-48">Share of a first spin that lands on Try Again. Try Again gives a free re-spin, and the re-spin always gives a gift, so every guest wins one while stock lasts. Set each prize's chance with Edit.</p>
       </div>
     </div>
     <form class="card bg-base-100 border border-secondary mb-5" @submit.prevent="addPrize($refs.prizeForm)" x-ref="prizeForm">
@@ -382,7 +382,7 @@
   function outcome(r) {
     if (isQr(r)) return { type: "QR code", gift: false, label: DISCOUNT_CODE + " discount" };
     if (r.prize) return { type: "Spin & win", gift: true, label: r.prize };
-    return { type: "Spin & win", gift: false, label: "No gift · " + DISCOUNT_CODE + " sent" };
+    return { type: "Spin & win", gift: false, label: "No gift" };
   }
 
   function matches(r, q) {
@@ -522,7 +522,7 @@
             "SUBSCRIBE", when,
             r.phone ? "SUBSCRIBE" : "", r.phone ? when : "",
             r.first_name, r.last_name,
-            outcome(r).type, r.prize || "None", (isQr(r) || !r.prize) ? DISCOUNT_CODE : "", r.is_parent, "Dubai Baby Expo 2026", r.source,
+            outcome(r).type, r.prize || "None", isQr(r) ? DISCOUNT_CODE : "", r.is_parent, "Dubai Baby Expo 2026", r.source,
             r.utm_source, r.utm_medium, r.utm_campaign
           ].map((v, i) => csvCell(v, i <= 2)).join(","));
         });
@@ -556,9 +556,7 @@
         const w = q => q.weight != null ? Number(q.weight) : (q.quantity == null ? largest : q.quantity - (q.given_count || 0));
         const total = live.reduce((a, q) => a + w(q), 0);
         if (!total) return "";
-        const ta = this.tryAgainPct / 100;
-        const perSpin = w(p) / total * (1 - ta);
-        const perGuest = perSpin * (1 + ta);   // a first Try Again gives one free re-spin
+        const perGuest = w(p) / total;   // a first Try Again gives a free re-spin, and the re-spin is always a gift
         return "≈ " + (perGuest * 100).toFixed(perGuest < 0.1 ? 1 : 0) + "% of guests";
       },
       async saveTryAgain() {

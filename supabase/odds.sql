@@ -3,10 +3,10 @@
 --
 -- How it works
 --   * prizes.weight: the prize's relative chance. Empty (null) = weight by remaining stock, as before.
---   * wheel_settings.try_again_pct: the share of every spin that lands on "Try Again" (a first Try Again
---     gives a free re-spin, so guests end up with nothing far less often than this number).
---   * A prize's chance of winning a spin = weight / (sum of the weights of the prizes that can be won right
---     now) x (100% - Try Again share). Sold-out prizes and prizes at their daily cap drop out automatically.
+--   * wheel_settings.try_again_pct: the share of a first spin that lands on "Try Again". That gives a free
+--     re-spin, and the re-spin is guaranteed to be a gift (spin_wheel(p_final := true) never returns Try Again).
+--   * A guest's chance of ending with a prize = weight / (sum of the weights of the prizes that can be won
+--     right now). Sold-out prizes and prizes at their daily cap drop out automatically.
 
 alter table public.prizes add column if not exists weight numeric
   check (weight is null or weight >= 0);
@@ -36,77 +36,85 @@ where p.active
                     where d.prize_id = p.id and d.day = (now() at time zone 'Asia/Dubai')::date), 0) < p.daily_limit);
 grant select on public.prizes_available to anon, authenticated;
 
-create or replace function public.spin_wheel()
+-- spin_wheel(p_final): p_final = true is the guest's last spin (their second one, after a Try Again).
+-- A final spin never lands on Try Again: it always gives a gift while any gift can still be won.
+drop function if exists public.spin_wheel();
+create or replace function public.spin_wheel(p_final boolean default false)
 returns jsonb
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_ta numeric := coalesce((select try_again_pct from wheel_settings where id = 1), 25) / 100;
+  v_ta numeric := case when p_final then 0 else coalesce((select try_again_pct from wheel_settings where id = 1), 25) / 100 end;
   v_today date := (now() at time zone 'Asia/Dubai')::date;
   unlimited_w numeric;
   total numeric;
   roll numeric;
-  acc numeric := 0;
+  acc numeric;
   p record;
   picked prizes.id%type;
   won record;
   claimed int;
+  attempt int;
 begin
-  select greatest(1, coalesce(max(quantity - given_count), 0)) into unlimited_w
-    from prizes_available where quantity is not null;
+  for attempt in 1..3 loop
+    select greatest(1, coalesce(max(quantity - given_count), 0)) into unlimited_w
+      from prizes_available where quantity is not null;
 
-  -- weight if set, otherwise remaining stock (unlimited prizes weigh as much as the largest stock)
-  select coalesce(sum(coalesce(weight, case when quantity is null then unlimited_w else quantity - given_count end)), 0)
-    into total from prizes_available;
+    -- weight if set, otherwise remaining stock (unlimited prizes weigh as much as the largest stock)
+    select coalesce(sum(coalesce(weight, case when quantity is null then unlimited_w else quantity - given_count end)), 0)
+      into total from prizes_available;
 
-  if total <= 0 then
-    return jsonb_build_object('kind', 'try_again');
-  end if;
+    if total <= 0 then
+      return jsonb_build_object('kind', 'try_again');   -- nothing left to give
+    end if;
 
-  roll := random() * (total / (1 - v_ta));
-  if roll >= total then
-    return jsonb_build_object('kind', 'try_again');
-  end if;
-
-  for p in select id, quantity, given_count, weight from prizes_available order by sort_order, id
-  loop
-    acc := acc + coalesce(p.weight, case when p.quantity is null then unlimited_w else p.quantity - p.given_count end);
-    if roll < acc then picked := p.id; exit; end if;
-  end loop;
-
-  update prizes set given_count = given_count + 1
-   where id = picked and (quantity is null or given_count < quantity)
-  returning id, name, image_url, daily_limit into won;
-
-  if not found then
-    return jsonb_build_object('kind', 'try_again');
-  end if;
-
-  if won.daily_limit is not null then
-    insert into prize_daily (prize_id, day, given) values (won.id, v_today, 1)
-      on conflict (prize_id, day) do update set given = prize_daily.given + 1
-      where prize_daily.given < won.daily_limit;
-    get diagnostics claimed = row_count;
-    if claimed = 0 then
-      update prizes set given_count = given_count - 1 where id = won.id;
+    roll := random() * (total / (1 - v_ta));
+    if roll >= total then
       return jsonb_build_object('kind', 'try_again');
     end if;
-  end if;
 
-  return jsonb_build_object('kind', 'prize', 'id', won.id, 'name', won.name, 'image_url', won.image_url);
+    acc := 0; picked := null;
+    for p in select id, quantity, given_count, weight from prizes_available order by sort_order, id
+    loop
+      acc := acc + coalesce(p.weight, case when p.quantity is null then unlimited_w else p.quantity - p.given_count end);
+      if roll < acc then picked := p.id; exit; end if;
+    end loop;
+
+    -- Atomic claim of stock (the row lock also serialises concurrent spins for the same prize).
+    update prizes set given_count = given_count + 1
+     where id = picked and (quantity is null or given_count < quantity)
+    returning id, name, image_url, daily_limit into won;
+
+    if found then
+      if won.daily_limit is null then
+        return jsonb_build_object('kind', 'prize', 'id', won.id, 'name', won.name, 'image_url', won.image_url);
+      end if;
+      -- Atomic claim of today's allowance; hand the unit back if the day is already full.
+      insert into prize_daily (prize_id, day, given) values (won.id, v_today, 1)
+        on conflict (prize_id, day) do update set given = prize_daily.given + 1
+        where prize_daily.given < won.daily_limit;
+      get diagnostics claimed = row_count;
+      if claimed > 0 then
+        return jsonb_build_object('kind', 'prize', 'id', won.id, 'name', won.name, 'image_url', won.image_url);
+      end if;
+      update prizes set given_count = given_count - 1 where id = won.id;
+    end if;
+    -- lost a race for the last unit: look again
+  end loop;
+
+  return jsonb_build_object('kind', 'try_again');
 end;
 $$;
 
-revoke all on function public.spin_wheel() from public;
-grant execute on function public.spin_wheel() to anon, authenticated;
+revoke all on function public.spin_wheel(boolean) from public;
+grant execute on function public.spin_wheel(boolean) to anon, authenticated;
 
--- Starting odds: everyone wins a gift while stock lasts (Try Again 0%), the two 50ml sets are pushed hard
--- and the special gifts stay rare. Per guest that is about: 3 x 50ml 47%, 6 x 50ml 47%, Mama Set 3.6%,
--- Detangle Set 2%, Mystery Gift 0.5%. Anyone who still gets no gift (all stock gone) is emailed the discount
--- code instead. Raise Try Again in the admin if you ever want fewer winners.
-update public.wheel_settings set try_again_pct = 0 where id = 1;
+-- Starting odds: Try Again 20% (a free re-spin), and the re-spin always gives a gift. The two 50ml sets are
+-- pushed hard and the special gifts stay rare. Every guest ends up with a gift while stock lasts, about:
+-- 3 x 50ml 47%, 6 x 50ml 47%, Mama Set 3.6%, Detangle Set 2%, Mystery Gift 0.5%. Both numbers are editable in the admin.
+update public.wheel_settings set try_again_pct = 20 where id = 1;
 update public.prizes set weight = 46  where name = '3 × 50ml Products';
 update public.prizes set weight = 46  where name = '6 × 50ml Products';
 update public.prizes set weight = 3.5 where name = 'Mama Set';
