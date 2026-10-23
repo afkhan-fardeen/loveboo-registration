@@ -377,7 +377,7 @@
   let realtimeSubscribed = false;
 
   // What a guest got, from how they signed up: QR page = discount code, spin page = a gift (or no gift, then the code).
-  const DISCOUNT_CODE = "EXPO2026";
+  const DISCOUNT_CODE = "EXPO-10OFF";
   const isQr = r => /_qr$/.test(r.source || "");
   function outcome(r) {
     if (isQr(r)) return { type: "QR code", gift: false, label: DISCOUNT_CODE + " discount" };
